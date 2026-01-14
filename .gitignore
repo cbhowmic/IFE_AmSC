@@ -1,0 +1,20 @@
+# Ignore everything in RHINO by default
+RHINO/**
+
+# Allow RHINO directory itself
+!RHINO/
+
+# Allow scripts directory
+!RHINO/scripts/
+
+# Allow ONLY python scripts in scripts
+!RHINO/scripts/*.py
+
+# Python junk
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
