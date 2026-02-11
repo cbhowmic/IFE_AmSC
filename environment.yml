@@ -1,0 +1,10 @@
+name: IFE_AmSC
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - hdf5
+  - seaborn
+  - scikit-learn
+  - lmfit
+  - openpmd-api=0.17.0
