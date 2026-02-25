@@ -1,32 +1,56 @@
+# This file reads RHINO output data (pkl files) and writes it in an openPMD series
+# Uses ADIOS2 as a backend (.bp5) with variable-based iteration encoding
+# Stores data in particle records (i.e. DataFrame-like)
+# Data is stored in ashared folder on NERSC
+# /global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino
+
 import openpmd_api as io
 import numpy as np
 import pandas as pd
 
 # Configuration
-OUTPUT_PATH = "/home/ccb/ccb/Projects/IFE_AmSC/RHINO/output/rhinoADIOS_particles.bp5"
+OUTPUT_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/older_data/output/rhinoADIOS_particles.bp5"
 SECONDS_PER_DAY = 86400.0
-
+DATA_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/older_data/Data"
 
 # Load RHINO Data
-T_ts_df = pd.read_pickle("Data/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T.pkl")
-D_ts_df = pd.read_pickle("Data/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D.pkl")
-meta_df = pd.read_pickle("Data/2025-12-16/06-57-07_AmSC_meta.pkl")
-T_ss_df = pd.read_pickle("Data/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T_SteadyState.pkl")
-D_ss_df = pd.read_pickle("Data/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D_SteadyState.pkl")
+T_ts_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T.pkl")
+D_ts_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D.pkl")
+meta_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_meta.pkl")
+T_ss_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T_SteadyState.pkl")
+D_ss_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D_SteadyState.pkl")
 
 meta = meta_df[0].to_dict()
 for k, v in list(meta.items()):
     if isinstance(v, np.generic):
         meta[k] = v.item()
 
+# Name of the subsystems in the power plant
 labels_subsystem = [
-    "Storage_Delivery", "Fueling", "Fusion_Chamber_Pump", "Pd_Cleanup",
-    "Protium_Removal", "Exhaust_Processing", "Gas_Detrit", "Water_Detrit",
-    "Glovebox", "Stack", "Isotope_Seperation", "Blanket_Extraction",
-    "Heat_Exchanger", "Power_Conv_Loop", "Vent_Detrit", "Blanket",
-    "Decay_Box", "Stack_Box", "Burn_Box", "Gen_Box", "Uptake_Box"
+    "Storage_Delivery", 
+    "Fueling", 
+    "Fusion_Chamber_Pump", 
+    "Pd_Cleanup",
+    "Protium_Removal", 
+    "Exhaust_Processing", 
+    "Gas_Detrit", 
+    "Water_Detrit",
+    "Glovebox", 
+    "Stack", 
+    "Isotope_Seperation", 
+    "Blanket_Extraction",
+    "Heat_Exchanger", 
+    "Power_Conv_Loop", 
+    "Vent_Detrit", 
+    "Blanket",
+    "Decay_Box", 
+    "Stack_Box", 
+    "Burn_Box", 
+    "Gen_Box", 
+    "Uptake_Box"
 ]
 
+# Canonical ordering of the subsystems
 canon = {name: i for i, name in enumerate(labels_subsystem)}
 
 # Build canonical arrays
@@ -84,7 +108,7 @@ series.flush()
 
 # Iteration
 series.particles_path = "inventory"
-it = series.iterations[0]
+it = series.snapshots()[0]
 
 if dt is not None:
     it.time = 0.0
@@ -113,22 +137,22 @@ def write_species(name, data_ts, data_ss):
     pos_rec.store_chunk(pos_data)
     pos_rec.unit_SI = 1.0
 
-    # time-series inventory data
-    data_arr = np.ascontiguousarray(data_ts)
-    inv_rec = pt["inventory"][io.Record_Component.SCALAR]
+    # time-series inventory data (copy to ensure writable for store_chunk)
+    data_arr = np.ascontiguousarray(data_ts).copy()
+    inv_rec = pt["mass"][io.Record_Component.SCALAR]
     inv_rec.reset_dataset(io.Dataset(data_arr.dtype, data_arr.shape))
     inv_rec.store_chunk(data_arr)
 
-    pt["inventory"].unit_dimension = {io.Unit_Dimension.M: 1}
+    pt["mass"].unit_dimension = {io.Unit_Dimension.M: 1}
     inv_rec.unit_SI = 1e-3
 
-    # steady-state inventory data
-    ss_arr = np.ascontiguousarray(data_ss)
-    ss_rec = pt["inventory_steady"][io.Record_Component.SCALAR]
+    # steady-state inventory data (copy to ensure writable for store_chunk)
+    ss_arr = np.ascontiguousarray(data_ss).copy()
+    ss_rec = pt["mass_steady"][io.Record_Component.SCALAR]
     ss_rec.reset_dataset(io.Dataset(ss_arr.dtype, ss_arr.shape))
     ss_rec.store_chunk(ss_arr)
 
-    pt["inventory_steady"].unit_dimension = {io.Unit_Dimension.M: 1}
+    pt["mass_steady"].unit_dimension = {io.Unit_Dimension.M: 1}
     ss_rec.unit_SI = 1e-3
 
 write_species("Tritium", T_ts, T_ss)
