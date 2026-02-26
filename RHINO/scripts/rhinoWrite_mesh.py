@@ -1,3 +1,9 @@
+# This file reads RHINO output data (pkl files) and writes it in an openPMD series
+# Uses ADIOS2 as a backend (.bp5) with variable-based iteration encoding
+# Stores data in mesh records (i.e. DataFrame-like)
+# Data is stored in a shared folder on NERSC
+# /global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino
+
 import openpmd_api as io
 import numpy as np
 import pandas as pd

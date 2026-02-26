@@ -1,3 +1,7 @@
+# This file reads RHINO ADIOS-OpenPMD data (which was written by rhinoWrite_particle.py)
+# Prints metadata, loads particle data to NumPy arrays
+# Plots inventory with time, these plots are saved in plots/ directory
+
 import openpmd_api as io
 import numpy as np
 import matplotlib.pyplot as plt

@@ -1,7 +1,7 @@
 # This file reads RHINO output data (pkl files) and writes it in an openPMD series
 # Uses ADIOS2 as a backend (.bp5) with variable-based iteration encoding
 # Stores data in particle records (i.e. DataFrame-like)
-# Data is stored in ashared folder on NERSC
+# Data is stored in a shared folder on NERSC
 # /global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino
 
 import openpmd_api as io
@@ -9,23 +9,26 @@ import numpy as np
 import pandas as pd
 
 # Configuration
-OUTPUT_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/older_data/output/rhinoADIOS_particles.bp5"
-SECONDS_PER_DAY = 86400.0
+OUTPUT_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/bp_output/rhino_particles.bp5"
 DATA_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/older_data/Data"
+# OUTPUT_PATH = "/home/ccb/ccb/Projects/IFE_AmSC/RHINO/bp_output/rhino_particles.bp5"
+# DATA_PATH = "/home/ccb/ccb/Projects/IFE_AmSC/RHINO/Data"
+SECONDS_PER_DAY = 86400.0
+
 
 # Load RHINO Data
 T_ts_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T.pkl")
 D_ts_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D.pkl")
-meta_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_meta.pkl")
 T_ss_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T_SteadyState.pkl")
 D_ss_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D_SteadyState.pkl")
+meta_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_meta.pkl")
 
+# metadata
 meta = meta_df[0].to_dict()
 for k, v in list(meta.items()):
     if isinstance(v, np.generic):
         meta[k] = v.item()
 
-# Name of the subsystems in the power plant
 labels_subsystem = [
     "Storage_Delivery", 
     "Fueling", 
@@ -49,24 +52,17 @@ labels_subsystem = [
     "Gen_Box", 
     "Uptake_Box"
 ]
-
-# Canonical ordering of the subsystems
 canon = {name: i for i, name in enumerate(labels_subsystem)}
 
-# Build canonical arrays
 T_ts = np.ascontiguousarray(T_ts_df.to_numpy(dtype=np.float64))
 nSubsystems, Nt = T_ts.shape
-
 D_ts = np.zeros((nSubsystems, Nt), dtype=np.float64)
 for name, row in D_ts_df.iterrows():
     D_ts[canon[str(name)], :] = row.to_numpy(dtype=np.float64)
-
 T_ss = T_ss_df.iloc[:, 0].to_numpy(dtype=np.float64)
 D_ss = np.zeros((nSubsystems,), dtype=np.float64)
 for name, row in D_ss_df.iterrows():
     D_ss[canon[str(name)]] = float(row.iloc[0])
-
-dt = float(meta["dt"]) if "dt" in meta else None
 
 # Create Series
 adios2_cfg = r'''
@@ -82,46 +78,91 @@ adios2_cfg = r'''
   }
 }
 '''
-
 series = io.Series(OUTPUT_PATH, io.Access_Type.create_linear, adios2_cfg)
-
 print("Writing RHINO data in particle representation...")
 
-# Series metadata
-series.author = "Holly Flynn <Holly.Flynn@srnl.doe.gov>"
-series.date = "2025-12-16"
-
-series.set_attribute("software", "RHINO")
-series.set_attribute("softwareDescription", "RHINO: Fusion Pilot Plant fuel cycle")
-series.set_attribute("softwareVersion", "1.0")
-series.set_attribute("schema", "OpenPMD")
+# ==============================
+# Root Schema Metadata
+series.set_attribute("schema", "OpenPMD+X")
 series.set_attribute("schemaVersion", "0.17.0")
+series.set_attribute("basePath", "/data")
+series.set_attribute("particlesPath", "inventory")
+series.set_attribute("iterationEncoding", "variableBased")
+series.set_attribute("iterationFormat", "bp5")
 
-series.set_attribute("subsystemLabels", labels_subsystem)
 
-if dt is not None:
-    series.set_attribute("timeStep", float(dt))
-    series.set_attribute("timeUnit", "day")
-    series.set_attribute("timeSteps", int(Nt))
+# ==============================
+# Software Metadata
+series.set_attribute("software/softwareName", "RHINO")
+series.set_attribute("software/softwareDescription", "RHINO: Fusion Pilot Plant fuel cycle simulation")
+series.set_attribute("software/softwareVersion", "1.0")
+# Placeholder for additional attributes under software/
+series.set_attribute("software/versionControlSoftware", "")
+series.set_attribute("software/softwareCommit", "")
+series.set_attribute("software/softwareDocumentation", "")
+
+
+# ==============================
+# Provenance metadata
+series.set_attribute("provenance/author", "Holly Flynn")
+series.set_attribute("provenance/authorAffiliation", "Savannah River National Laboratory")
+series.set_attribute("provenance/authorEmail", "Holly.Flynn@srnl.doe.gov")
+series.set_attribute("provenance/creationDate", "2025-12-16")
+# Placeholder for additional attributes under provenance/
+series.set_attribute("provenance/inputDirectory", "")
+series.set_attribute("provenance/inputFiles", "")
+series.set_attribute("provenance/originalDataDirectory", "")
+series.set_attribute("provenance/originalDataFiles", "")
+
+
+# ==============================
+# System metadata (placeholders)
+series.set_attribute("system/systemIP", "")
+series.set_attribute("system/systemDescription", "")
+
+
+# ==============================
+# Application metadata (RHINO-specific)
+series.set_attribute("metadata/subsystems/description", "Subsystems of the pilot plant fuel cycle")
+ids = np.arange(nSubsystems, dtype=np.uint64)
+series.set_attribute("metadata/subsystems/id", ids.tolist())
+series.set_attribute("metadata/subsystems/labels", labels_subsystem)
+# series.set_attribute("metadata/subsystems/mapping", canon)        # dict as an attribute is not supported
+# Placeholder for additional attributes under metadata/subsystems/
+series.set_attribute("metadata/subsystems/connections", "")
+series.set_attribute("metadata/subsystems/connectionType", "")
+
+series.set_attribute("metadata/species/description", "Gas species in the fuel cycle")
+series.set_attribute("metadata/species/names", ["Tritium", "Deuterium"])
+# Placeholder for additional attributes under metadata/species/
+series.set_attribute("metadata/species/Tritium/subsystems", "")
+series.set_attribute("metadata/species/Tritium/subsystemsConnection", "")
+series.set_attribute("metadata/species/Deuterium/subsystems", "")
+series.set_attribute("metadata/species/Deuterium/subsystemsConnection", "")
 
 series.flush()
 
+
+# ==============================
+# Data
+# ==============================
 # Iteration
+dt = float(meta["dt"]) if "dt" in meta else None
 series.particles_path = "inventory"
 it = series.snapshots()[0]
-
 if dt is not None:
     it.time = 0.0
     it.dt = float(dt)
     it.time_unit_SI = SECONDS_PER_DAY
+    it.set_attribute("timeUnitLabel", "day")
 
-ids = np.arange(nSubsystems, dtype=np.uint64)
 pos_data = np.arange(nSubsystems, dtype=np.float64)
 
 def write_species(name, data_ts, data_ss):
 
     pt = it.particles[name]
 
+    pt.set_attribute("description", "Inventory across subsystems for species " + name)
     pt.set_attribute("particleShape", "point")
     pt.set_attribute("particleType", "subsystem")
     pt.set_attribute("timeAxis", 1)  
@@ -161,5 +202,5 @@ write_species("Deuterium", D_ts, D_ss)
 it.close()
 series.close()
 
-print("FAST particle file written.")
+print("RHINO data written to ADIOS-OpenPMD in particle representation.")
 print("Output:", OUTPUT_PATH)
