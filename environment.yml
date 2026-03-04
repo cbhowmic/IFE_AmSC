@@ -1,10 +1,22 @@
 name: IFE_AmSC
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - jupyter
+  - ipykernel
+  - ipywidgets
   - hdf5
   - seaborn
   - scikit-learn
   - lmfit
   - openpmd-api=0.17.0
+  - pip
+  - pip:
+    - ipympl
+    - tqdm
