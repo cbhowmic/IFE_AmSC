@@ -18,6 +18,37 @@ conda env create -f environment.yml
 ```bash
 conda activate IFE_AmSC
 ```
+### On NERSC
+  
+  
+## Installation on NERSC
+
+This project uses a conda environment to manage dependencies. To set up the environment:
+
+1. Activate python
+```bash
+module load python
+```
+
+2. Clone this repo
+```bash
+git clone git@github.com:cbhowmic/IFE_AmSC.git
+cd IFE_AmSC
+```
+
+3. Create and activate the environment:
+```bash
+mkdir -p /global/cfs/cdirs/m3239/$(whoami)/sw/perlmutter/IFE_AmSC
+conda env create --prefix /global/cfs/cdirs/m3239/$(whoami)/sw/perlmutter/IFE_AmSC -f environment.yml
+conda activate /global/cfs/cdirs/m3239/$(whoami)/sw/perlmutter/IFE_AmSC
+```
+
+4. Enable the environment in notebooks
+```bash
+python -m ipykernel install --user --name env --display-name 'IFE AmSC'
+```
+
+4. Go to `https://jupyter.nersc.gov/`, select "Login node", open the notebook `... .ipynb` and select the kernel `IFE AmSC`.
 
 ## Project Structure
 ```text
