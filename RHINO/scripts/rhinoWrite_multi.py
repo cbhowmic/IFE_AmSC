@@ -9,16 +9,23 @@ import openpmd_api as io
 import numpy as np
 import pandas as pd
 import re
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 import socket
+import networkx as nx
 
 
 ROOT_PATH = Path("/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/more_data_runs/")
+INPUT_PATH = f"{ROOT_PATH}/makeJSON.py"
 SCENARIOS = ["Burn Fraction Changes", "TBR", "Protium Removal", "Extraction", "Power Scan"]    
 OUTPUT_ROOT = Path("/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/bp_output")
+INPUT_PATH = f"{ROOT_PATH}/makeJSON.py"
+
 SECONDS_PER_DAY = 86400.0
 
+sys.path.append(str(ROOT_PATH))
+from makeJSON import InputFile
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
 
@@ -52,14 +59,27 @@ adios2_cfg = r'''
 # }
 
 # canonical subsystem labels 
-labels_subsystem = [
-    "Storage_Delivery", "Fueling", "Fusion_Chamber_Pump", "Pd_Cleanup",
-    "Protium_Removal", "Exhaust_Processing", "Gas_Detrit", "Water_Detrit",
-    "Glovebox", "Stack", "Isotope_Seperation", "Blanket_Extraction",
-    "Heat_Exchanger", "Power_Conv_Loop", "Vent_Detrit", "Blanket",
-    "Decay_Box", "Stack_Box", "Burn_Box", "Gen_Box", "Uptake_Box"
-]
-canon = {name: i for i, name in enumerate(labels_subsystem)}
+df_inputs = pd.DataFrame(InputFile['Systems_T']).T #
+df_inputs.columns = ['subsystem_label', 
+              'processing_time', 
+              'nonradioactive_loss',
+              'fractional_inflows', 
+              'initial_mass',
+              'source',
+              'injectors', 
+              'debug']
+labels_subsystems = df_inputs["subsystem_label"].to_list()
+nSubsystems = len(labels_subsystems)
+ids_subsystems = np.arange(nSubsystems, dtype=np.uint64)
+
+# labels_subsystem = [
+#     "Storage_Delivery", "Fueling", "Fusion_Chamber_Pump", "Pd_Cleanup",
+#     "Protium_Removal", "Exhaust_Processing", "Gas_Detrit", "Water_Detrit",
+#     "Glovebox", "Stack", "Isotope_Seperation", "Blanket_Extraction",
+#     "Heat_Exchanger", "Power_Conv_Loop", "Vent_Detrit", "Blanket",
+#     "Decay_Box", "Stack_Box", "Burn_Box", "Gen_Box", "Uptake_Box"
+# ]
+canon = {name: i for i, name in enumerate(labels_subsystems)}
 
 
 # helper function to parse structured fields from log file
@@ -197,11 +217,14 @@ for scenario in SCENARIOS:
                     if isinstance(v, np.generic):
                         meta[k] = v.item()
 
+                # time-series arrays
                 T_ts = np.ascontiguousarray(T_ts_df.to_numpy(dtype=np.float64))
-                nSubsystems, Nt = T_ts.shape
+                _, Nt = T_ts.shape
                 D_ts = np.zeros((nSubsystems, Nt), dtype=np.float64)
                 for name, row in D_ts_df.iterrows():
                     D_ts[canon[str(name)], :] = row.to_numpy(dtype=np.float64)
+                
+                # steady-state arrays
                 T_ss = T_ss_df.iloc[:, 0].to_numpy(dtype=np.float64)
                 D_ss = np.zeros((nSubsystems,), dtype=np.float64)
                 for name, row in D_ss_df.iterrows():
@@ -210,6 +233,10 @@ for scenario in SCENARIOS:
                 # Compute total steady-state inventory per species
                 T_ss_total = float(np.sum(T_ss))
                 D_ss_total = float(np.sum(D_ss))
+
+                # build explicit time coordinate (in days, if dt is in days)
+                dt_val = float(meta["dt"]) if "dt" in meta else None
+                time_data = np.arange(Nt, dtype=np.float64) * dt_val if dt_val is not None else None
     
                 # build output path 
                 safe_param = scenario.replace(" ", "_")
@@ -282,10 +309,10 @@ for scenario in SCENARIOS:
                 series.set_attribute("system/systemParameter", f"Scenario: {scenario}; run: {run_prefix_data}")
             
                 # metadata/subsystems
-                ids = np.arange(nSubsystems, dtype=np.uint64)
+                # ids = np.arange(nSubsystems, dtype=np.uint64)
                 series.set_attribute("metadata/subsystems/description", "Subsystems of the pilot plant fuel cycle")
-                series.set_attribute("metadata/subsystems/id", ids.tolist())
-                series.set_attribute("metadata/subsystems/labels", labels_subsystem)
+                series.set_attribute("metadata/subsystems/id", ids_subsystems.tolist())
+                series.set_attribute("metadata/subsystems/labels", labels_subsystems)
                 series.set_attribute("metadata/subsystems/connections", [])
                 series.set_attribute("metadata/subsystems/connectionType", "directed_nonweighted")
                 
@@ -315,6 +342,17 @@ for scenario in SCENARIOS:
                     it.time_unit_SI = SECONDS_PER_DAY
                     it.set_attribute("timeUnitLabel", "day")
                     it.set_attribute("timeSteps", int(Nt))            
+
+                    # explicit time coordinate array for axis 1 of mass[subsystem, time]
+                    time_mesh = it.meshes["time"]
+                    time_mesh.set_attribute("description", "Time coordinate for axis 1 of particle mass datasets")
+                    time_mesh.set_attribute("geometry", "cartesian")
+                    time_mesh.set_attribute("axisLabels", ["t"])
+
+                    time_rec = time_mesh[io.Record_Component.SCALAR]
+                    time_rec.reset_dataset(io.Dataset(time_data.dtype, time_data.shape))
+                    time_rec.store_chunk(time_data)
+                    time_rec.unit_SI = SECONDS_PER_DAY
     
                 pos_data = np.arange(nSubsystems, dtype=np.float64)
 
@@ -341,6 +379,10 @@ for scenario in SCENARIOS:
                     inv_rec.store_chunk(data_arr)
                     pt["mass"].unit_dimension = {io.Unit_Dimension.M: 1}
                     inv_rec.unit_SI = 1e-3
+                    pt["mass"].set_attribute("timeAxis", 1)
+                    pt["mass"].set_attribute("shape", "subsystem,time")
+                    pt["mass"].set_attribute("timeCoordinates", "/data/0/meshes/time")
+
                     
                     # steady-state inventory
                     ss_arr = np.ascontiguousarray(data_ss).copy()
@@ -349,14 +391,13 @@ for scenario in SCENARIOS:
                     ss_rec.store_chunk(ss_arr)
                     pt["mass_steady"].unit_dimension = {io.Unit_Dimension.M: 1}
                     ss_rec.unit_SI = 1e-3
-                    pt["mass"].set_attribute("timeAxis", 1)
     
                     total_ss = float(np.sum(ss_arr))
                     pt.set_attribute("mass_steady_total", total_ss)
                     pt.set_attribute("mass_steady_total_unit_SI", 1e-3)
 
-                write_species(it, ids, pos_data, "Tritium", T_ts, T_ss)
-                write_species(it, ids, pos_data, "Deuterium", D_ts, D_ss)
+                write_species(it, ids_subsystems, pos_data, "Tritium", T_ts, T_ss)
+                write_species(it, ids_subsystems, pos_data, "Deuterium", D_ts, D_ss)
     
                 it.close()
                 series.close()
