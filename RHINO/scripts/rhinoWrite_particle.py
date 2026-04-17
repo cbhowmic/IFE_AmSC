@@ -1,184 +1,205 @@
-# This file reads RHINO output data (pkl files) and writes it in an openPMD series
-# Uses ADIOS2 as a backend (.bp5) with variable-based iteration encoding
-# Stores data in particle records (i.e. DataFrame-like)
-# Data is stored in a shared folder on NERSC
-# /global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino
+"""
+This file reads RHINO data (pkl files) 
+and writes it into an openPMD series
+using ADIOS2 as a backend (.bp5)
+"""
 
-import openpmd_api as io
+import sys
 import numpy as np
 import pandas as pd
+import openpmd_api as io
+ 
+# Notes for Holly: 
+# It would be nice if the folder structure were DATA_PATH/PREFIX/T.pkl, etc.
+# It would be nice to have the individual input files in each folder 
+# The metafile name does not follow the same convention as the others (i.e. no infix)
+# Attributes = Metadata
+# Note that the subsystems ids are not the same for T and D: correct?
 
-# Configuration
-OUTPUT_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/bp_output/rhino_particles.bp5"
-DATA_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/older_data/Data"
-# OUTPUT_PATH = "/home/ccb/ccb/Projects/IFE_AmSC/RHINO/bp_output/rhino_particles.bp5"
-# DATA_PATH = "/home/ccb/ccb/Projects/IFE_AmSC/RHINO/Data"
-SECONDS_PER_DAY = 86400.0
+#####################
+### Configuration ###
+#####################
+# Folder where the bp file will be saved 
+OUTPUT_PATH = "/global/cfs/cdirs/m3239/aforment/IFE_AmSC/RHINO/scripts/tmp/rhino_particles.bp5"
 
+# Paths where RHINO data is 
+RHINO_PATH = "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/more_data_runs" 
+DATA_PATH  = f"{RHINO_PATH}/Extraction/Data" 
+INPUT_PATH = f"{RHINO_PATH}/makeJSON.py" 
+PREFIX="12-34-31" 
+INFIX ="IFE_AmSC_500MW_FuelCycle"  
 
-# Load RHINO Data
-T_ts_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T.pkl")
-D_ts_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D.pkl")
-T_ss_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_T_SteadyState.pkl")
-D_ss_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_Generic_FuelCycle_D_SteadyState.pkl")
-meta_df = pd.read_pickle(f"{DATA_PATH}/2025-12-16/06-57-07_AmSC_meta.pkl")
+# Import input file 
+sys.path.append(RHINO_PATH)
+from makeJSON import InputFile
 
-# metadata
+#######################
+### Load RHINO data ###
+#######################
+# Time-Series and Steady-State data
+T_ts_df = pd.read_pickle(f"{DATA_PATH}/{PREFIX}_{INFIX}_T.pkl")
+D_ts_df = pd.read_pickle(f"{DATA_PATH}/{PREFIX}_{INFIX}_D.pkl")
+T_ss_df = pd.read_pickle(f"{DATA_PATH}/{PREFIX}_{INFIX}_T_SteadyState.pkl")
+D_ss_df = pd.read_pickle(f"{DATA_PATH}/{PREFIX}_{INFIX}_D_SteadyState.pkl")
+# Metafile
+meta_df = pd.read_pickle(f"{DATA_PATH}/{PREFIX}_IFE_meta.pkl")
+
+########################
+### Extract metadata ###
+########################
+# Convert metadata to dictionary
 meta = meta_df[0].to_dict()
 for k, v in list(meta.items()):
     if isinstance(v, np.generic):
         meta[k] = v.item()
 
-labels_subsystem = [
-    "Storage_Delivery", 
-    "Fueling", 
-    "Fusion_Chamber_Pump", 
-    "Pd_Cleanup",
-    "Protium_Removal", 
-    "Exhaust_Processing", 
-    "Gas_Detrit", 
-    "Water_Detrit",
-    "Glovebox", 
-    "Stack", 
-    "Isotope_Seperation", 
-    "Blanket_Extraction",
-    "Heat_Exchanger", 
-    "Power_Conv_Loop", 
-    "Vent_Detrit", 
-    "Blanket",
-    "Decay_Box", 
-    "Stack_Box", 
-    "Burn_Box", 
-    "Gen_Box", 
-    "Uptake_Box"
-]
-canon = {name: i for i, name in enumerate(labels_subsystem)}
+# Get timestep
+dt = float(meta["dt"]) if "dt" in meta else None
+if dt is None:
+    raise ValueError("dt is required for time-series data")   
 
+# Get simulation time 
+endtime = float(meta["calc_length"])
+times = np.arange(0, endtime+dt, dt)
+nt = len(times)
+
+# Useful constant 
+SECONDS_PER_DAY = 86400.0
+
+######################
+### Extract inputs ###
+######################
+my_inputs = {}
+# Tritium 
+my_inputs["Tritium"] = {}
+for k,v in InputFile['Systems_T'].items():
+    my_inputs["Tritium"][v[0]] = {"id": k, 
+                                  "processing time": v[1], 
+                                  "nonradioactive loss fraction": v[2], 
+                                  "fractional inflows": v[3], 
+                                  "initial mass": v[4], 
+                                  "source": v[5], 
+                                  "injectors": v[6], 
+                                  "label": v[7]}
+# Deuterium 
+my_inputs["Deuterium"] = {}
+for k,v in InputFile['Systems_D'].items():
+    my_inputs["Deuterium"][v[0]] = {"id": k, 
+                                  "processing time": v[1], 
+                                  "nonradioactive loss fraction": v[2], 
+                                  "fractional inflows": v[3], 
+                                  "initial mass": v[4], 
+                                  "source": v[5], 
+                                  "injectors": v[6], 
+                                  "label": v[7]}
+# Superset of all subsystem names 
+all_subsystems_names = np.union1d(list(my_inputs["Tritium"]), list(my_inputs["Deuterium"]))
+
+###########################
+### Extract inventories ###
+###########################
+my_inventory = {}
+# Tritium 
 T_ts = np.ascontiguousarray(T_ts_df.to_numpy(dtype=np.float64))
-nSubsystems, Nt = T_ts.shape
-D_ts = np.zeros((nSubsystems, Nt), dtype=np.float64)
-for name, row in D_ts_df.iterrows():
-    D_ts[canon[str(name)], :] = row.to_numpy(dtype=np.float64)
+nSubsystemsT, Nt = T_ts.shape
 T_ss = T_ss_df.iloc[:, 0].to_numpy(dtype=np.float64)
-D_ss = np.zeros((nSubsystems,), dtype=np.float64)
-for name, row in D_ss_df.iterrows():
-    D_ss[canon[str(name)]] = float(row.iloc[0])
+my_inventory["Tritium"]   = {"data_ts": T_ts, "data_ss": T_ss}
+# Deuterium 
+D_ts = np.ascontiguousarray(D_ts_df.to_numpy(dtype=np.float64))
+nSubsystemsD, Nt = D_ts.shape
+D_ss = D_ss_df.iloc[:, 0].to_numpy(dtype=np.float64)
+my_inventory["Deuterium"] = {"data_ts": D_ts, "data_ss": D_ss}
 
-# Create Series
+#############################
+### Create openPMD series ###
+#############################
 adios2_cfg = r'''
 {
   "iteration_encoding": "variable_based",
   "adios2": {
+    "modifiable_attributes": false,
+    "use_group_table": false,
     "engine": {
       "type": "bp5",
       "parameters": {
-        "StatsLevel": "0"
+        "StatsLevel": "1",
+        "AsyncWrite": "guided"
       }
     }
   }
 }
 '''
 series = io.Series(OUTPUT_PATH, io.Access_Type.create_linear, adios2_cfg)
-print("Writing RHINO data in particle representation...")
+print("Converting RHINO data into openPMD/ADIOS2 format...")
+print(f"Input: {DATA_PATH}")
 
-# ==============================
-# Root Schema Metadata
-series.set_attribute("schema", "OpenPMD+X")
-series.set_attribute("schemaVersion", "0.17.0")
-series.set_attribute("basePath", "/data")
-series.set_attribute("particlesPath", "inventory")
-series.set_attribute("iterationEncoding", "variableBased")
-series.set_attribute("iterationFormat", "bp5")
-
-
-# ==============================
-# Software Metadata
-series.set_attribute("software/softwareName", "RHINO")
-series.set_attribute("software/softwareDescription", "RHINO: Fusion Pilot Plant fuel cycle simulation")
-series.set_attribute("software/softwareVersion", "1.0")
-# Placeholder for additional attributes under software/
-series.set_attribute("software/versionControlSoftware", "")
-series.set_attribute("software/softwareCommit", "")
-series.set_attribute("software/softwareDocumentation", "")
-
-
-# ==============================
-# Provenance metadata
-series.set_attribute("provenance/author", "Holly Flynn")
-series.set_attribute("provenance/authorAffiliation", "Savannah River National Laboratory")
-series.set_attribute("provenance/authorEmail", "Holly.Flynn@srnl.doe.gov")
-series.set_attribute("provenance/creationDate", "2025-12-16")
-# Placeholder for additional attributes under provenance/
-series.set_attribute("provenance/inputDirectory", "")
-series.set_attribute("provenance/inputFiles", "")
-series.set_attribute("provenance/originalDataDirectory", "")
-series.set_attribute("provenance/originalDataFiles", "")
-
-
-# ==============================
-# System metadata (placeholders)
-series.set_attribute("system/systemIP", "")
-series.set_attribute("system/systemDescription", "")
-
-
-# ==============================
-# Application metadata (RHINO-specific)
-series.set_attribute("metadata/subsystems/description", "Subsystems of the pilot plant fuel cycle")
-ids = np.arange(nSubsystems, dtype=np.uint64)
-series.set_attribute("metadata/subsystems/id", ids.tolist())
-series.set_attribute("metadata/subsystems/labels", labels_subsystem)
-# series.set_attribute("metadata/subsystems/mapping", canon)        # dict as an attribute is not supported
-# Placeholder for additional attributes under metadata/subsystems/
-series.set_attribute("metadata/subsystems/connections", "")
-series.set_attribute("metadata/subsystems/connectionType", "")
-
-series.set_attribute("metadata/species/description", "Gas species in the fuel cycle")
-series.set_attribute("metadata/species/names", ["Tritium", "Deuterium"])
-# Placeholder for additional attributes under metadata/species/
-series.set_attribute("metadata/species/Tritium/subsystems", "")
-series.set_attribute("metadata/species/Tritium/subsystemsConnection", "")
-series.set_attribute("metadata/species/Deuterium/subsystems", "")
-series.set_attribute("metadata/species/Deuterium/subsystemsConnection", "")
-
-series.flush()
-
-
-# ==============================
-# Data
-# ==============================
-# Iteration
-dt = float(meta["dt"]) if "dt" in meta else None
+#########################
+### Series attributes ###
+#########################
+# openPMD-ready attributes
 series.particles_path = "inventory"
+series.set_attribute("software", "RHINO")
+series.set_attribute("softwareVersion", "1.0")
+series.set_attribute("softwareDescription", "RHINO: Fusion Pilot Plant fuel cycle simulation")
+series.set_attribute("author", "Holly Flynn")
+series.set_attribute("authorAffiliation", "Savannah River National Laboratory")
+series.set_attribute("authorEmail", "Holly.Flynn@srnl.doe.gov")
+series.set_attribute("date", "2025-12-16")
+series.set_attribute("machine", "")
+series.set_attribute("comment", f"Provenance: data path is {DATA_PATH}, input file is {INPUT_PATH}")
+# General inputs (common to D and T) 
+series.set_attribute("input:TBR:Tritium Breeding Ratio", InputFile["System Inputs"]["TBR"])
+series.set_attribute("input:TBRr:Required Tritium Breeding Ratio", InputFile["System Inputs"]["TBRr"])
+series.set_attribute("input:beta:Burn fraction", InputFile["System Inputs"]["beta"])
+series.set_attribute("input:eta:Fueling efficiency", InputFile["System Inputs"]["eta"])
+series.set_attribute("input:Ndotminus:Tritium burned per day", InputFile["System Inputs"]["Ndotminus"])
+series.set_attribute("input:MW:Power output in MW", InputFile["System Inputs"]["MW"])
+series.set_attribute("input:I0_SD:Starting inventory", InputFile["System Inputs"]["I0_SD"])
+
+##########################
+### Create iteration 0 ###
+##########################
 it = series.snapshots()[0]
-if dt is not None:
-    it.time = 0.0
-    it.dt = float(dt)
-    it.time_unit_SI = SECONDS_PER_DAY
-    it.set_attribute("timeUnitLabel", "day")
+it.time = 0.0
+it.dt = float(dt)
+it.time_unit_SI = SECONDS_PER_DAY
 
-pos_data = np.arange(nSubsystems, dtype=np.float64)
+#######################
+### Save time array ###
+#######################
+species = it.particles["Times"]  
+species.set_attribute("description", "Times")
+record = species["data"]
+record.unit_dimension =  {io.Unit_Dimension.T: 1}
+record.unit_SI = SECONDS_PER_DAY
+data = np.ascontiguousarray(times).copy()
+dataset = io.Dataset(times.dtype, times.shape)
+component = record[io.Record_Component.SCALAR]
+component = record[io.Record_Component.SCALAR]
+component.reset_dataset(dataset)
+component.store_chunk(data)
 
+#############################
+### Save species: T and D ###
+#############################
 def write_species(name, data_ts, data_ss):
 
     pt = it.particles[name]
-
     pt.set_attribute("description", "Inventory across subsystems for species " + name)
-    pt.set_attribute("particleShape", "point")
-    pt.set_attribute("particleType", "subsystem")
     pt.set_attribute("timeAxis", 1)  
+    pt.set_attribute("subsystemsAxis", 0)
 
-    # id 
-    id_rec = pt["id"][io.Record_Component.SCALAR]
-    id_rec.reset_dataset(io.Dataset(ids.dtype, ids.shape))
-    id_rec.store_chunk(ids)
+    # subsystems data
+    record = pt["subsystems"]
+    for k,v in my_inputs[name].items():
+        component = record[k]
+        component.make_empty
+        for kk, vv in my_inputs[name][k].items():
+            component.set_attribute(kk, vv)
+        component.reset_dataset(io.Dataset(data.dtype, data.shape))
+        component.store_chunk(data)
 
-    # logical position
-    pos_rec = pt["position"]["x"]
-    pos_rec.reset_dataset(io.Dataset(pos_data.dtype, pos_data.shape))
-    pos_rec.store_chunk(pos_data)
-    pos_rec.unit_SI = 1.0
-
-    # time-series inventory data (copy to ensure writable for store_chunk)
+    # time-series inventory data
     data_arr = np.ascontiguousarray(data_ts).copy()
     inv_rec = pt["mass"][io.Record_Component.SCALAR]
     inv_rec.reset_dataset(io.Dataset(data_arr.dtype, data_arr.shape))
@@ -186,8 +207,8 @@ def write_species(name, data_ts, data_ss):
 
     pt["mass"].unit_dimension = {io.Unit_Dimension.M: 1}
     inv_rec.unit_SI = 1e-3
-
-    # steady-state inventory data (copy to ensure writable for store_chunk)
+    
+    # steady-state inventory data
     ss_arr = np.ascontiguousarray(data_ss).copy()
     ss_rec = pt["mass_steady"][io.Record_Component.SCALAR]
     ss_rec.reset_dataset(io.Dataset(ss_arr.dtype, ss_arr.shape))
@@ -199,8 +220,10 @@ def write_species(name, data_ts, data_ss):
 write_species("Tritium", T_ts, T_ss)
 write_species("Deuterium", D_ts, D_ss)
 
+######################
+### Close and save ###
+######################
 it.close()
 series.close()
-
 print("RHINO data written to ADIOS-OpenPMD in particle representation.")
 print("Output:", OUTPUT_PATH)
