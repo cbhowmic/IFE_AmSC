@@ -102,12 +102,12 @@ my_inventory = {}
 # Tritium 
 T_ts = np.ascontiguousarray(T_ts_df.to_numpy(dtype=np.float64))
 nSubsystemsT, Nt = T_ts.shape
-T_ss = T_ss_df.iloc[:, 0].to_numpy(dtype=np.float64)
+T_ss = T_ss_df.iloc[:, 1].to_numpy(dtype=np.float64)
 my_inventory["Tritium"]   = {"data_ts": T_ts, "data_ss": T_ss}
 # Deuterium 
 D_ts = np.ascontiguousarray(D_ts_df.to_numpy(dtype=np.float64))
 nSubsystemsD, Nt = D_ts.shape
-D_ss = D_ss_df.iloc[:, 0].to_numpy(dtype=np.float64)
+D_ss = D_ss_df.iloc[:, 1].to_numpy(dtype=np.float64)
 my_inventory["Deuterium"] = {"data_ts": D_ts, "data_ss": D_ss}
 
 #############################
