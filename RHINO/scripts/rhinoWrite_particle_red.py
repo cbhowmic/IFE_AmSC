@@ -126,7 +126,11 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     
     # Save times
     times = np.linspace(0, endtime, Nt)
-    
+
+    # Time to steady state 
+    # if "box" not in substystem and subs != Storage_delivery -> compute time to ss
+    SS_time = ...
+
     #############################
     ### Create openPMD series ###
     #############################
@@ -172,9 +176,12 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     series.set_attribute("input:Ndotminus:Tritium burned per day", InputFile["System Inputs"]["Ndotminus"])
     series.set_attribute("input:MW:Power output in MW", InputFile["System Inputs"]["MW"])
     series.set_attribute("input:I0_SD:Starting inventory", InputFile["System Inputs"]["I0_SD"])
-    
+
+    # Post-processes outputs computed by Holly 
+    # I0 (g)	Imin (g)	I_startup (g)	I_subtract (g)	reserve_time (days)	Iops (g)	plant_doubling_time (days)
     for k,v in PostProcData.items():
         series.set_attribute(f"output:{k}", v)
+    series.set_attribute("output:Steady state time (days)", SS_time)
     
     ##########################
     ### Create iteration 0 ###
