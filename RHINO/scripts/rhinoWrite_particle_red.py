@@ -129,7 +129,41 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
 
     # Time to steady state 
     # if "box" not in substystem and subs != Storage_delivery -> compute time to ss
+<<<<<<< HEAD
     SS_time = ...
+=======
+    ss_tol = 0.02  # tolerance band for ss
+
+    def time_to_steady_state(times, ts, ss, tol=0.01):
+        if np.isclose(ss, 0.0):
+            err = np.abs(ts - ss)
+        else:
+            err = np.abs((ts - ss) / ss)
+        inside = err <= tol
+        i = len(times) - 1
+        while i >= 0 and inside[i]:
+            i -= 1
+        if i == len(times) - 1:
+            return np.nan
+        return float(times[i + 1])
+    t_ss_by_subsystem = {}
+    for i, name in enumerate(all_subsystems_names):
+        lname = name.lower()
+        if "box" in lname or "storage" in lname or "delivery" in lname:
+            continue
+        t_ss_by_subsystem[name] = time_to_steady_state(
+            times=times,
+            ts=T_ts[i, :],
+            ss=T_ss[i],
+            tol=ss_tol,
+        )
+
+    valid_t_ss = [t for t in t_ss_by_subsystem.values() if not np.isnan(t)]
+    if len(valid_t_ss) > 0:
+        ss_time = float(np.max(valid_t_ss))
+    else:
+        ss_time = np.nan
+>>>>>>> baeb9b7 (Computing time to  steady-state)
 
     #############################
     ### Create openPMD series ###
@@ -181,7 +215,11 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     # I0 (g)	Imin (g)	I_startup (g)	I_subtract (g)	reserve_time (days)	Iops (g)	plant_doubling_time (days)
     for k,v in PostProcData.items():
         series.set_attribute(f"output:{k}", v)
+<<<<<<< HEAD
     series.set_attribute("output:Steady state time (days)", SS_time)
+=======
+    series.set_attribute("output:Steady state time (days)", ss_time)
+>>>>>>> baeb9b7 (Computing time to  steady-state)
     
     ##########################
     ### Create iteration 0 ###
