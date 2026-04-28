@@ -129,9 +129,6 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
 
     # Time to steady state 
     # if "box" not in substystem and subs != Storage_delivery -> compute time to ss
-<<<<<<< HEAD
-    SS_time = ...
-=======
     ss_tol = 0.02  # tolerance band for ss
 
     def time_to_steady_state(times, ts, ss, tol=0.01):
@@ -163,8 +160,6 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
         ss_time = float(np.max(valid_t_ss))
     else:
         ss_time = np.nan
->>>>>>> baeb9b7 (Computing time to  steady-state)
-
     #############################
     ### Create openPMD series ###
     #############################
@@ -215,11 +210,8 @@ def save_bp(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     # I0 (g)	Imin (g)	I_startup (g)	I_subtract (g)	reserve_time (days)	Iops (g)	plant_doubling_time (days)
     for k,v in PostProcData.items():
         series.set_attribute(f"output:{k}", v)
-<<<<<<< HEAD
     series.set_attribute("output:Steady state time (days)", SS_time)
-=======
     series.set_attribute("output:Steady state time (days)", ss_time)
->>>>>>> baeb9b7 (Computing time to  steady-state)
     
     ##########################
     ### Create iteration 0 ###
