@@ -1,7 +1,9 @@
 import asyncio
 from fastmcp import Client
 
-client = Client("mcp_server_rhino.py")
+from mcp_server_rhino import mcp
+
+client = Client(mcp)
 
 async def main():
     async with client:
@@ -13,18 +15,16 @@ async def main():
         result = await client.call_tool(
             "predict_rhino_surrogate",
             {
-                "I0_SD": 100.0,
                 "Ndotminus": 500.0,
                 "beta": 0.1,
             },
         )
         print("\nTool result:")
-        print(result)
+        print(result.data)
 
         nearest = await client.call_tool(
             "find_nearest_simulation",
             {
-                "I0_SD": 100.0,
                 "Ndotminus": 500.0,
                 "beta": 0.1,
             },
@@ -36,7 +36,6 @@ async def main():
         result_and_nearest = await client.call_tool(
             "predict_and_compare_to_nearest_simulation",
             {
-                "I0_SD": 100.0,
                 "Ndotminus": 500.0,
                 "beta": 0.1,
             },
@@ -57,9 +56,9 @@ async def main():
         result_graph = await client.call_tool(
             "build_graph_for_nearest_simulation",
             {
-                "I0_SD": 100.0,
                 "Ndotminus": 500.0,
                 "beta": 0.1,
+                "start_visualization": False,
             },
         )
 
@@ -73,6 +72,6 @@ async def main():
 
         print("n nodes:", len(nodes))
         print("n edges:", len(edges))
-        print("time info:", time)        
+        print("time info:", time)   
 
 asyncio.run(main())
