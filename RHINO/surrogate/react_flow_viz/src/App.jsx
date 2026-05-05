@@ -1,4 +1,4 @@
-import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -28,6 +28,7 @@ const DATA_FILES = {
 };
 
 const DATA_TIMEOUT_MS = 5500;
+const LIVE_REFRESH_INTERVAL_MS = 1500;
 const CANVAS_BASE = '#182533';
 const CANVAS_GRID = 'rgba(129, 169, 203, 0.1)';
 const SURFACE = 'rgba(13, 26, 38, 0.92)';
@@ -180,6 +181,15 @@ async function loadVisualizationSources(remoteBaseUrl) {
   };
 }
 
+async function loadGraphRevision(remoteBaseUrl) {
+  const revision = await fetchJsonWithTimeout(
+    buildDataUrl(remoteBaseUrl, 'graph_version.json'),
+    2500,
+  );
+
+  return Number(revision?.graphRevision);
+}
+
 function findFirstThresholdCrossing(series, threshold) {
   if (!Array.isArray(series) || !Number.isFinite(threshold)) {
     return -1;
@@ -260,6 +270,27 @@ function formatPredictionValue(prediction) {
 
   const unit = String(prediction.unit).trim();
   return unit.startsWith('[') ? `${formatted} ${unit}` : `${formatted} [${unit}]`;
+}
+
+function formatSignedError(value, unit) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 'n/a';
+  }
+
+  const formatted = formatMass(Math.abs(numeric));
+  const trimmedUnit = unit ? String(unit).trim() : '';
+  const suffix = trimmedUnit ? ` ${trimmedUnit.startsWith('[') ? trimmedUnit : `[${trimmedUnit}]`}` : '';
+  return `${numeric >= 0 ? '+' : '-'}${formatted}${suffix}`;
+}
+
+function formatRelativeError(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 'n/a';
+  }
+
+  return `${(numeric * 100).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
 }
 
 function formatMassWithUnit(value, unit = 'g') {
@@ -356,12 +387,27 @@ function normalizeSurrogatePredictions(value) {
   );
 }
 
+function normalizeSimulationSummary(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  return {
+    simulationId: value.simulationId || '',
+    runFolder: value.runFolder || '',
+    scenario: value.scenario || '',
+    path: value.path || '',
+    distanceNormalized: Number(value.distanceNormalized),
+  };
+}
+
 function normalizeTimePayload(rawTimeData) {
   if (!rawTimeData || typeof rawTimeData !== 'object') {
     return {
       timeSeries: [],
       timeUnit: 'days',
       surrogatePredictions: SURROGATE_DEFAULTS,
+      simulationSummary: null,
     };
   }
 
@@ -374,6 +420,9 @@ function normalizeTimePayload(rawTimeData) {
     timeUnit: typeof timeData.timeUnit === 'string' ? timeData.timeUnit : 'days',
     surrogatePredictions: normalizeSurrogatePredictions(
       rawTimeData.surrogatePredictions ?? timeData.surrogatePredictions,
+    ),
+    simulationSummary: normalizeSimulationSummary(
+      rawTimeData.simulationSummary ?? timeData.simulationSummary,
     ),
   };
 }
@@ -499,7 +548,7 @@ const ComponentNode = memo(function ComponentNode({ data }) {
   const pulseClass = alertPulseLevel > 1 ? 'is-pulsing-strong' : alertPulseLevel > 0 ? 'is-pulsing' : '';
   const nodeFaceColor = isLossNode ? NODE_FACE_LOSS : isDiagnostic ? NODE_FACE_DIAGNOSTIC : NODE_FACE;
   const frameColor = isLossNode ? LOSS_COLOR : isDiagnostic ? UNSPECIFIED_COLOR : presentation.color;
-  const secondStatLabel = isDiagnostic ? 'Readout span' : 'Fullness';
+  const secondStatLabel = isDiagnostic ? 'Readout span' : 'Run span';
 
   return (
     <div
@@ -552,7 +601,7 @@ const ComponentNode = memo(function ComponentNode({ data }) {
           <div className="plant-node-stats">
             <div className="plant-node-stat">
               <div className="plant-node-stat-label">
-              Current mass
+              Mass now
               </div>
               <div className="plant-node-stat-value">
                 {formatMass(currentMass)}
@@ -609,12 +658,15 @@ export default function App() {
   const [timeSeries, setTimeSeries] = useState([]);
   const [timeUnit, setTimeUnit] = useState('days');
   const [surrogatePredictions, setSurrogatePredictions] = useState(SURROGATE_DEFAULTS);
+  const [simulationSummary, setSimulationSummary] = useState(null);
   const [timeIndex, setTimeIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackMode, setPlaybackMode] = useState(1);
   const [layoutStatus, setLayoutStatus] = useState('');
   const [showLossEdges, setShowLossEdges] = useState(true);
   const [showUnspecifiedEdges, setShowUnspecifiedEdges] = useState(false);
+  const [flowInstance, setFlowInstance] = useState(null);
+  const latestGraphRevisionRef = useRef(-1);
   const [dataStatus, setDataStatus] = useState(() => {
     const remoteBaseUrl = getRemoteBaseUrl();
 
@@ -657,6 +709,10 @@ export default function App() {
       const nodesData = Array.isArray(nodesResult.data) ? nodesResult.data : [];
       const edgesData = Array.isArray(edgesResult.data) ? edgesResult.data : [];
       const timeData = normalizeTimePayload(timeResult.data);
+      const graphRevision = Number(timeResult.data?.graphRevision);
+      if (Number.isFinite(graphRevision)) {
+        latestGraphRevisionRef.current = graphRevision;
+      }
       const lookup = {};
       const positionLookup = {};
       const typedNodes = nodesData.map((node) => {
@@ -742,6 +798,7 @@ export default function App() {
       setTimeSeries(timeData.timeSeries);
       setTimeUnit(timeData.timeUnit);
       setSurrogatePredictions(timeData.surrogatePredictions);
+      setSimulationSummary(timeData.simulationSummary);
       setTimeIndex(0);
       setIsPlaying(false);
       setDataStatus({
@@ -775,6 +832,46 @@ export default function App() {
 
     return () => {
       isMounted = false;
+    };
+  }, [loadVisualizationData]);
+
+  useEffect(() => {
+    if (!flowInstance || !baseNodes.length) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      flowInstance.fitView({ padding: 0.18, duration: 420 });
+    }, 60);
+
+    return () => window.clearTimeout(timer);
+  }, [baseNodes, flowInstance]);
+
+  useEffect(() => {
+    const remoteBaseUrl = getRemoteBaseUrl();
+    if (!remoteBaseUrl) {
+      return undefined;
+    }
+
+    let isMounted = true;
+    const timer = window.setInterval(async () => {
+      try {
+        const graphRevision = await loadGraphRevision(remoteBaseUrl);
+        if (
+          isMounted &&
+          Number.isFinite(graphRevision) &&
+          graphRevision > latestGraphRevisionRef.current
+        ) {
+          await loadVisualizationData(false, () => isMounted);
+        }
+      } catch (error) {
+        console.warn('Unable to check live graph revision.', error);
+      }
+    }, LIVE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
     };
   }, [loadVisualizationData]);
 
@@ -1009,6 +1106,7 @@ export default function App() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        onInit={setFlowInstance}
         onNodesChange={onNodesChange}
         fitView
         fitViewOptions={{ padding: 0.16 }}
@@ -1164,22 +1262,37 @@ export default function App() {
             </div>
 
             <div className="metric-grid">
-              <MetricCard label="Total current mass" value={formatMassWithUnit(massStats.totalMass)} accent={FLOW_COLOR} />
+              <MetricCard label="Total mass now" value={formatMassWithUnit(massStats.totalMass)} accent={FLOW_COLOR} />
               <MetricCard label="Total steady-state mass" value={formatMassWithUnit(massStats.steadyStateMass)} accent="#d9e0e5" />
               <MetricCard label="Above 2x init" value={String(massStats.aboveDouble)} accent={WARNING_RED} />
               <MetricCard label="Above 0.5 ss" value={String(massStats.aboveHalfSteady)} accent={WARNING_AMBER} />
             </div>
 
+            {simulationSummary && (
+              <div className="panel-section simulation-section">
+                <div className="panel-section-title">
+                  Visualized simulation
+                </div>
+                <div className="simulation-run">{simulationSummary.runFolder || simulationSummary.simulationId}</div>
+                <div className="simulation-detail">
+                  nearest archived run · normalized input distance{' '}
+                  {Number.isFinite(simulationSummary.distanceNormalized)
+                    ? simulationSummary.distanceNormalized.toLocaleString(undefined, { maximumSignificantDigits: 3 })
+                    : 'n/a'}
+                </div>
+              </div>
+            )}
+
             <div className="panel-section surrogate-section">
               <div className="panel-section-title">
-                Surrogate predictions
+                Surrogate vs simulation
               </div>
               <div className="surrogate-grid">
                 {Object.entries(surrogatePredictions).map(([key, prediction]) => (
                   <PredictionCard
                     key={key}
                     label={prediction.label}
-                    value={formatPredictionValue(prediction)}
+                    value={prediction}
                   />
                 ))}
               </div>
@@ -1242,10 +1355,28 @@ function MetricCard({ accent, label, value }) {
 }
 
 function PredictionCard({ label, value }) {
+  const simulationValue = Number(value?.nearestSimulation);
+  const hasSimulationValue = Number.isFinite(simulationValue);
+  const unit = value?.unit || '';
+
   return (
     <div className="prediction-card">
       <div className="prediction-label">{label}</div>
-      <div className="prediction-value">{value}</div>
+      <div className="prediction-comparison">
+        <div>
+          <div className="prediction-sub-label">Surrogate</div>
+          <div className="prediction-value">{formatPredictionValue(value)}</div>
+        </div>
+        <div>
+          <div className="prediction-sub-label">Simulation</div>
+          <div className="prediction-value is-simulation">
+            {hasSimulationValue ? formatPredictionValue({ value: simulationValue, unit }) : 'n/a'}
+          </div>
+        </div>
+      </div>
+      <div className="prediction-error">
+        Δ {formatSignedError(value?.absoluteError, unit)} · rel {formatRelativeError(value?.relativeError)}
+      </div>
     </div>
   );
 }
