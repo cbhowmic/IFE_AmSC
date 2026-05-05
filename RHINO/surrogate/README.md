@@ -24,34 +24,52 @@ This folder contains the workflow for the live demo:
 
 ## Directory Structure
 
+From `RHINO/surrogate`:
+
 ```text
-RHINO/surrogate/
+$ tree -L 3 -I 'node_modules|__pycache__|dist'
+.
+├── build_graph.py
+├── build_simulation_index.ipynb
+├── build_simulation_index.py
+├── data
+│   ├── rhino_surrogate.pt
+│   ├── simulation_index.json
+│   ├── surrogate_bp_output
+│   │   ├── 2026-04-29
+│   │   ├── 2026-04-30
+│   │   └── 2026-05-01
+│   └── surrogate_bp_output.zip
+├── demo_client.py
+├── graph_builder.py
+├── mcp_server_rhino.py
+├── react_flow_viz
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   │   ├── edges_rf.json
+│   │   ├── favicon.svg
+│   │   ├── graph_payload.json
+│   │   ├── icons.svg
+│   │   ├── nodes_rf.json
+│   │   └── time_rf.json
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.jsx
+│   │   ├── assets
+│   │   ├── index.css
+│   │   ├── main.jsx
+│   │   └── README.md
+│   └── vite.config.js
 ├── README.md
 ├── requirements.txt
-├── rhino_surrogate_runtime.py      # Runtime wrapper for surrogate inference
-├── rhinoSurrogate.py               # Surrogate helper script
-├── rhinoSurrogate.ipynb            # Notebook for surrogate exploration
-├── mcp_server_rhino.py             # FastMCP server for live demo queries
-├── demo_client.py                  # CLI client for sending demo inputs
-├── test_local.py                   # Local runtime smoke test
-├── test_client.py                  # In-process MCP client smoke test
-├── simulation_lookup.py            # Finds nearest archived BP5 simulation
-├── build_simulation_index.py       # Rebuilds the simulation index
-├── graph_builder.py                # Builds React Flow graph data
-├── build_graph.py                  # CLI graph build helper
-├── data/                           # Surrogate model, index, and BP5 data
-│   ├── rhino_surrogate.pt          # Trained RHINO surrogate model
-│   ├── simulation_index.json       # Simulation metadata lookup table
-│   ├── surrogate_bp_output.zip     # Archived BP5 simulation data
-│   └── surrogate_bp_output/        # Unzipped BP5 simulation data
-└── react_flow_viz/                 # Vite/React Flow visualization app
-    ├── package.json
-    ├── package-lock.json
-    ├── vite.config.js
-    ├── index.html
-    ├── public/                     # Bundled fallback graph JSON and icons
-    ├── src/                        # React app source
-    └── dist/                       # Built visualization assets
+├── rhinoSurrogate.ipynb
+├── rhinoSurrogate.py
+├── rhino_surrogate_runtime.py
+├── simulation_lookup.py
+├── test_client.py
+└── test_local.py
 ```
 
 ## Demo Setup Notes
@@ -140,10 +158,12 @@ Pass the two physical inputs with the demo client flags below. Use physical
 values, not normalized values; the surrogate runtime handles normalization
 internally.
 
-| Physical input | CLI flag | Units |
-| --- | --- | --- |
-| Burning rate | `--Ndotminus` | grams per day, `g/d` |
-| Burn fraction | `--beta` | unitless fraction |
+
+| Physical input | CLI flag      | Units                |
+| -------------- | ------------- | -------------------- |
+| Burning rate   | `--Ndotminus` | grams per day, `g/d` |
+| Burn fraction  | `--beta`      | unitless fraction    |
+
 
 Example:
 
@@ -216,3 +236,4 @@ To also refresh the bundled fallback JSON files in `react_flow_viz/public`, pass
 ```bash
 python demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files
 ```
+

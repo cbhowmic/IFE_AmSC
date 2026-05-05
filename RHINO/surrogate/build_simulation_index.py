@@ -13,6 +13,10 @@ import numpy as np
 import openpmd_api as io
 
 
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+
+
 # In[ ]:
 
 
@@ -204,7 +208,8 @@ def main():
         "records": records,
     }
 
-    out_path = Path("simulation_index.json")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = DATA_DIR / "simulation_index.json"
     with out_path.open("w") as f:
         json.dump(payload, f, indent=2)
 
@@ -216,7 +221,6 @@ if __name__ == "__main__":
 
 
 # In[ ]:
-
 
 
 
