@@ -1,19 +1,38 @@
 # RHINO Surrogate Demo
 
-TLDR: Run the RHINO surrogate for `Ndotminus` and `beta`, match the nearest archived BP5 simulation, and visualize the result with the local React Flow demo. The demo assumes the directory structure below and requires two terminals.
+## TLDR
 
-Terminal 1:
+Run the RHINO surrogate for `Ndotminus` and `beta`, match the nearest archived BP5 simulation, and visualize the result with the local React Flow demo. The demo assumes the directory structure below and requires two terminals.
 
-```bash
-python mcp_server_rhino.py
+Installation:
+```bash 
+git clone https://github.com/cbhowmic/IFE_AmSC.git
+cd IFE_AmSC
+git checkout surrogate
+conda create -y --name scspdemo -c conda-forge python nodejs
+conda activate scspdemo
+pip install -r RHINO/surrogate/requirements.txt
+npm --prefix RHINO/surrogate/react_flow_viz ci
+unzip RHINO/surrogate/data/surrogate_bp_output.zip -d RHINO/surrogate/data/
 ```
 
-Terminal 2:
+From the same terminal:
 
 ```bash
-python demo_client.py --Ndotminus 500 --beta 0.1
+RHINO_MCP_PORT=8001 python RHINO/surrogate/mcp_server_rhino.py
 ```
 
+Open a second terminal:
+
+```bash
+conda activate scspdemo
+python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --mcp-url http://127.0.0.1:8001/mcp
+```
+
+Click on the link to open the visualization in the browser. 
+
+
+## Details 
 This folder contains the workflow for the live demo:
 
 1. take two physical inputs, `Ndotminus` and `beta`
@@ -72,51 +91,44 @@ $ tree -L 3 -I 'node_modules|__pycache__|dist'
 └── test_local.py
 ```
 
-## Demo Setup Notes
+## Demo Setup
 
-There are two separate sets of dependencies in this demo.
-
-Python dependencies are listed in `RHINO/surrogate/requirements.txt`:
+From the repository root, create one Conda environment with Python plus Node.js.
+The `nodejs` Conda package also provides `npm`:
 
 ```bash
-conda create --name scspdemo 
+conda create -y --name scspdemo -c conda-forge python nodejs
 conda activate scspdemo
+```
+
+If the environment already exists, add Node.js to it with:
+
+```bash
+conda activate scspdemo
+conda install -y -c conda-forge nodejs
+```
+
+Install the Python dependencies:
+
+```bash
 pip install -r RHINO/surrogate/requirements.txt
 ```
 
-The visualization dependencies are JavaScript/React dependencies. They do not go
-in `requirements.txt`; they are listed in
-`RHINO/surrogate/react_flow_viz/package.json` and pinned by
-`RHINO/surrogate/react_flow_viz/package-lock.json`.
-
-The visualization app requires Node.js and `npm`. `npm` is used only for the
-React Flow app setup and is normally installed with Node.js.
-
-You can install Node.js and `npm` inside the same Conda environment:
-
-```bash
-conda activate scspdemo
-conda install -c conda-forge nodejs
-```
-
-Check that both commands are available:
+Check that Node.js and `npm` are available:
 
 ```bash
 node --version
 npm --version
 ```
 
-Then install the visualization dependencies from the visualization folder:
+Install the React Flow visualization dependencies:
 
 ```bash
-cd RHINO/surrogate/react_flow_viz
-npm ci
+npm --prefix RHINO/surrogate/react_flow_viz ci
 ```
 
 Use `npm ci` on the demo computer because it installs exactly the versions in
 `package-lock.json`, which is more reproducible than a fresh `npm install`.
-
-## Portable Data Layout
 
 Keep the downloaded BP5 simulation data in:
 
@@ -168,7 +180,7 @@ internally.
 Example:
 
 ```bash
-python demo_client.py --Ndotminus 500 --beta 0.1
+python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1
 ```
 
 This command requires the MCP server to be running first; see the two-terminal
@@ -181,29 +193,33 @@ The same parameter names, `Ndotminus` and `beta`, are used by the MCP tools
 
 ## Demo Launch
 
-Use two terminals.
+Use two terminals from the repository root.
 
 Terminal 1 starts the MCP server:
 
 ```bash
-cd RHINO/surrogate
 conda activate scspdemo
-python mcp_server_rhino.py
+python RHINO/surrogate/mcp_server_rhino.py
 ```
 
 The MCP server defaults to `http://127.0.0.1:8000/mcp`. If port 8000 is already
 busy, use another port:
 
 ```bash
-RHINO_MCP_PORT=8001 python mcp_server_rhino.py
+RHINO_MCP_PORT=8001 python RHINO/surrogate/mcp_server_rhino.py
 ```
 
 Terminal 2 sends demo inputs to the MCP server:
 
 ```bash
-cd RHINO/surrogate
 conda activate scspdemo
-python demo_client.py --Ndotminus 500 --beta 0.1
+python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1
+```
+
+If the server is running on port 8001, point the client to that port:
+
+```bash
+python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --mcp-url http://127.0.0.1:8001/mcp
 ```
 
 Calling `build_graph_for_nearest_simulation` keeps the latest graph payload in
@@ -234,6 +250,5 @@ graph automatically when that revision changes.
 To also refresh the bundled fallback JSON files in `react_flow_viz/public`, pass:
 
 ```bash
-python demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files
+python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files
 ```
-
