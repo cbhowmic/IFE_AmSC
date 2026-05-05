@@ -1,3 +1,132 @@
+# RHINO Surrogate Demo
+
+This folder contains the live demo workflow:
+
+1. take two physical inputs, `Ndotminus` and `beta`
+2. run `rhino_surrogate.pt` through `rhino_surrogate_runtime.py`
+3. find the nearest archived BP5 simulation
+4. build the React Flow graph payload
+5. optionally start the local visualization app
+
+The old startup inventory input, `I0_SD`, is no longer used by the surrogate or
+MCP tools.
+
+## Demo Setup Notes
+
+There are two separate dependency systems in this demo.
+
+Python dependencies are listed in `RHINO/surrogate/requirements.txt`:
+
+```bash
+conda activate scspdemo
+pip install -r RHINO/surrogate/requirements.txt
+```
+
+The visualization dependencies are JavaScript/React dependencies. They do not go
+in `requirements.txt`; they are listed in
+`RHINO/surrogate/react_flow_viz/package.json` and pinned by
+`RHINO/surrogate/react_flow_viz/package-lock.json`.
+
+Install them from the visualization folder:
+
+```bash
+cd RHINO/surrogate/react_flow_viz
+npm ci
+```
+
+Use `npm ci` on the demo computer because it installs exactly the versions in
+`package-lock.json`, which is more reproducible than a fresh `npm install`.
+
+## Portable Data Layout
+
+Keep the downloaded BP5 simulation data in:
+
+```text
+RHINO/data/surrogate_bp_output/
+```
+
+The current `simulation_index.json` may contain old absolute paths from another
+machine. That is okay: `SimulationLookup` resolves those indexed paths into the
+local `RHINO/data/surrogate_bp_output` folder at runtime. If the demo computer
+uses a different data location, set:
+
+```bash
+export RHINO_SIM_DATA_ROOT=/path/to/surrogate_bp_output
+```
+
+## Smoke Tests
+
+From `RHINO/surrogate`:
+
+```bash
+conda activate scspdemo
+python test_local.py
+python test_client.py
+```
+
+`test_client.py` uses an in-process FastMCP client, so it does not need port
+8000 and will not fail if another local process is already using that port.
+
+## Demo Launch
+
+Use two terminals.
+
+Terminal 1 starts the MCP server:
+
+```bash
+cd RHINO/surrogate
+conda activate scspdemo
+python mcp_server_rhino.py
+```
+
+The MCP server defaults to `http://127.0.0.1:8000/mcp`. If port 8000 is already
+busy, use another port:
+
+```bash
+RHINO_MCP_PORT=8001 python mcp_server_rhino.py
+```
+
+Terminal 2 sends demo inputs to the MCP server:
+
+```bash
+cd RHINO/surrogate
+conda activate scspdemo
+python demo_client.py --Ndotminus 500 --beta 0.1
+```
+
+Calling `build_graph_for_nearest_simulation` keeps the latest graph payload in
+the MCP server and exposes it through these HTTP routes:
+
+```text
+http://127.0.0.1:8000/graph_payload.json
+http://127.0.0.1:8000/nodes_rf.json
+http://127.0.0.1:8000/edges_rf.json
+http://127.0.0.1:8000/time_rf.json
+```
+
+The React Flow app starts at `http://127.0.0.1:5173` with a `dataBaseUrl`
+query parameter pointing back to the MCP server, so it reads the live graph
+directly from the server. If no live graph has been generated yet, the MCP
+routes use the existing JSON files as fallback data.
+
+The visualization panel shows the archived simulation being visualized using
+the BP5 run folder name, for example `00-02-22.bp5`. The surrogate panel compares
+each surrogate prediction against that nearest simulation's stored output, with
+absolute and relative error shown beside the two values.
+
+When new inputs are sent through `demo_client.py` or another MCP client, the
+server increments a graph revision counter. The React Flow app checks
+`http://127.0.0.1:8000/graph_version.json` periodically and reloads the live
+graph automatically when that revision changes.
+
+To also write fresh JSON files into `react_flow_viz/public`, pass:
+
+```bash
+python demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files
+```
+
+---
+
 # RHINO Module
 
 This module processes RHINO simulation outputs and converts them into AI-ready ADIOS datasets following the project schema.
