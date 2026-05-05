@@ -10,6 +10,7 @@ from simulation_lookup import SimulationLookup
 
 
 BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
 VIZ_PUBLIC_DIR = BASE_DIR / "react_flow_viz" / "public"
 
 
@@ -21,7 +22,7 @@ def main():
     }
 
     # Load surrogate
-    surrogate = RhinoSurrogate(BASE_DIR / "rhino_surrogate.pt", device="cpu")
+    surrogate = RhinoSurrogate(DATA_DIR / "rhino_surrogate.pt", device="cpu")
 
     # Predict surrogate outputs
     prediction_display = surrogate.predict_with_display_names(inputs)
@@ -30,8 +31,8 @@ def main():
 
     # Load nearest-simulation lookup
     lookup = SimulationLookup(
-        index_path=BASE_DIR / "simulation_index.json",
-        artifact_path=BASE_DIR / "rhino_surrogate.pt",
+        index_path=DATA_DIR / "simulation_index.json",
+        artifact_path=DATA_DIR / "rhino_surrogate.pt",
     )
 
     # Find nearest archived simulation
@@ -57,8 +58,7 @@ def main():
     print(graph["time"].keys())
     print(graph["surrogatePredictions"])
 
-    # Write debug JSON files locally
-    write_graph_payload(graph, payload_out=str(BASE_DIR / "graph_payload.json"))
+    # Write the bundled visualization fallback JSON files.
     VIZ_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
     write_graph_payload(
         graph,
@@ -67,7 +67,7 @@ def main():
         edges_out=str(VIZ_PUBLIC_DIR / "edges_rf.json"),
         time_out=str(VIZ_PUBLIC_DIR / "time_rf.json"),
     )
-    print("\nWrote graph payload files locally and into react_flow_viz/public")
+    print("\nWrote graph payload files into react_flow_viz/public")
 
 
 if __name__ == "__main__":

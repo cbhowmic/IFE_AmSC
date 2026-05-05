@@ -1,8 +1,13 @@
+from pathlib import Path
+
 from rhino_surrogate_runtime import RhinoSurrogate
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
 
 print("Testing surrogate")
 
-surrogate = RhinoSurrogate("rhino_surrogate.pt", device="cpu")
+surrogate = RhinoSurrogate(DATA_DIR / "rhino_surrogate.pt", device="cpu")
 
 result = surrogate.predict_from_named_args(
     Ndotminus=500.0,
@@ -26,8 +31,8 @@ print("Testing simulation lookup")
 from simulation_lookup import SimulationLookup
 
 lookup = SimulationLookup(
-    index_path="simulation_index.json",
-    artifact_path="rhino_surrogate.pt",
+    index_path=DATA_DIR / "simulation_index.json",
+    artifact_path=DATA_DIR / "rhino_surrogate.pt",
 )
 
 result = lookup.find_nearest(
@@ -66,11 +71,9 @@ print("#################")
 print("Testing graph builder")
 
 
-from graph_builder import build_graph_from_simulation, write_graph_payload
+from graph_builder import build_graph_from_simulation
 
-sim_path ="../data/surrogate_bp_output/2026-04-30/10-39-07.bp5"
+sim_path = DATA_DIR / "surrogate_bp_output" / "2026-04-30" / "10-39-07.bp5"
 graph = build_graph_from_simulation(sim_path)
 
 print(graph.keys())
-
-write_graph_payload(graph)

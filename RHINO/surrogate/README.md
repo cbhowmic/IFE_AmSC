@@ -1,13 +1,24 @@
 # RHINO Surrogate Demo
 
-TLDR: Run the RHINO surrogate for `Ndotminus` and `beta`, match the nearest archived BP5 simulation, and visualize the result with the local React Flow demo.
-It assumes the directory structure below. 
+TLDR: Run the RHINO surrogate for `Ndotminus` and `beta`, match the nearest archived BP5 simulation, and visualize the result with the local React Flow demo. The demo assumes the directory structure below and requires two terminals.
+
+Terminal 1:
+
+```bash
+python mcp_server_rhino.py
+```
+
+Terminal 2:
+
+```bash
+python demo_client.py --Ndotminus 500 --beta 0.1
+```
 
 This folder contains the workflow for the live demo:
 
 1. take two physical inputs, `Ndotminus` and `beta`
 2. run `rhino_surrogate.pt` through `rhino_surrogate_runtime.py`
-3. find the nearest archived BP5 simulation **from local folder**
+3. find the nearest archived BP5 simulation from **local folder** `data/`
 4. build the React Flow graph payload
 5. start the local visualization app
 
@@ -17,7 +28,6 @@ This folder contains the workflow for the live demo:
 RHINO/surrogate/
 ├── README.md
 ├── requirements.txt
-├── rhino_surrogate.pt              # Trained RHINO surrogate model
 ├── rhino_surrogate_runtime.py      # Runtime wrapper for surrogate inference
 ├── rhinoSurrogate.py               # Surrogate helper script
 ├── rhinoSurrogate.ipynb            # Notebook for surrogate exploration
@@ -26,20 +36,20 @@ RHINO/surrogate/
 ├── test_local.py                   # Local runtime smoke test
 ├── test_client.py                  # In-process MCP client smoke test
 ├── simulation_lookup.py            # Finds nearest archived BP5 simulation
-├── simulation_index.json           # Simulation metadata lookup table
 ├── build_simulation_index.py       # Rebuilds the simulation index
 ├── graph_builder.py                # Builds React Flow graph data
 ├── build_graph.py                  # CLI graph build helper
-├── graph_payload.json              # Secondary graph payload fallback
-├── nodes_rf.json                   # Secondary React Flow node fallback data
-├── edges_rf.json                   # Secondary React Flow edge fallback data
-├── time_rf.json                    # Secondary time-series fallback data
+├── data/                           # Surrogate model, index, and BP5 data
+│   ├── rhino_surrogate.pt          # Trained RHINO surrogate model
+│   ├── simulation_index.json       # Simulation metadata lookup table
+│   ├── surrogate_bp_output.zip     # Archived BP5 simulation data
+│   └── surrogate_bp_output/        # Unzipped BP5 simulation data
 └── react_flow_viz/                 # Vite/React Flow visualization app
     ├── package.json
     ├── package-lock.json
     ├── vite.config.js
     ├── index.html
-    ├── public/                     # Primary static fallback JSON and icons
+    ├── public/                     # Bundled fallback graph JSON and icons
     ├── src/                        # React app source
     └── dist/                       # Built visualization assets
 ```
@@ -64,7 +74,21 @@ in `requirements.txt`; they are listed in
 The visualization app requires Node.js and `npm`. `npm` is used only for the
 React Flow app setup and is normally installed with Node.js.
 
-Install them from the visualization folder:
+You can install Node.js and `npm` inside the same Conda environment:
+
+```bash
+conda activate scspdemo
+conda install -c conda-forge nodejs
+```
+
+Check that both commands are available:
+
+```bash
+node --version
+npm --version
+```
+
+Then install the visualization dependencies from the visualization folder:
 
 ```bash
 cd RHINO/surrogate/react_flow_viz
@@ -79,19 +103,19 @@ Use `npm ci` on the demo computer because it installs exactly the versions in
 Keep the downloaded BP5 simulation data in:
 
 ```text
-RHINO/data/surrogate_bp_output/
+RHINO/surrogate/data/surrogate_bp_output/
 ```
 
 If you have the zipped BP5 data folder, unzip it from the repository root:
 
 ```bash
-unzip RHINO/data/surrogate_bp_output.zip -d RHINO/data/
+unzip RHINO/surrogate/data/surrogate_bp_output.zip -d RHINO/surrogate/data/
 ```
 
-The current `simulation_index.json` may contains absolute paths from NERSC. 
+The current `simulation_index.json` contains absolute paths from NERSC.
 That is okay: `SimulationLookup` resolves those indexed paths into the
-local `RHINO/data/surrogate_bp_output` folder at runtime. If the demo computer
-uses a different data location, set:
+local `RHINO/surrogate/data/surrogate_bp_output` folder at runtime. If the demo
+computer uses a different data location, set:
 
 ```bash
 export RHINO_SIM_DATA_ROOT=/path/to/surrogate_bp_output
@@ -126,6 +150,9 @@ Example:
 ```bash
 python demo_client.py --Ndotminus 500 --beta 0.1
 ```
+
+This command requires the MCP server to be running first; see the two-terminal
+launch instructions below.
 
 The same parameter names, `Ndotminus` and `beta`, are used by the MCP tools
 `predict_rhino_surrogate`, `find_nearest_simulation`,
@@ -172,9 +199,7 @@ http://127.0.0.1:8000/time_rf.json
 The React Flow app starts at `http://127.0.0.1:5173` with a `dataBaseUrl`
 query parameter pointing back to the MCP server, so it reads the live graph
 directly from the server. If no live graph has been generated yet, the MCP
-routes use the existing JSON files as fallback data. The server checks
-`react_flow_viz/public` first, then falls back to the matching JSON files in
-`RHINO/surrogate`.
+routes use the bundled fallback JSON files in `react_flow_viz/public`.
 
 The visualization panel shows the archived simulation being visualized using
 the BP5 run folder name, for example `00-02-22.bp5`. The surrogate panel compares
@@ -186,7 +211,7 @@ server increments a graph revision counter. The React Flow app checks
 `http://127.0.0.1:8000/graph_version.json` periodically and reloads the live
 graph automatically when that revision changes.
 
-To also write fresh JSON files into `react_flow_viz/public`, pass:
+To also refresh the bundled fallback JSON files in `react_flow_viz/public`, pass:
 
 ```bash
 python demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files

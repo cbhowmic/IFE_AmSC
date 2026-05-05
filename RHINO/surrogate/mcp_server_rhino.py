@@ -20,8 +20,9 @@ from graph_builder import (
 mcp = FastMCP("RHINO Surrogate")
 
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = BASE_DIR / "rhino_surrogate.pt"
-INDEX_PATH = BASE_DIR / "simulation_index.json"
+DATA_DIR = BASE_DIR / "data"
+MODEL_PATH = DATA_DIR / "rhino_surrogate.pt"
+INDEX_PATH = DATA_DIR / "simulation_index.json"
 VIZ_DIR = BASE_DIR / "react_flow_viz"
 VIZ_PUBLIC_DIR = VIZ_DIR / "public"
 
@@ -73,17 +74,13 @@ def _mcp_base_url() -> str:
 
 
 def _read_fallback_json(file_name: str) -> dict | list:
-    candidates = [
-        VIZ_PUBLIC_DIR / file_name,
-        BASE_DIR / file_name,
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            import json
+    fallback_path = VIZ_PUBLIC_DIR / file_name
+    if fallback_path.exists():
+        import json
 
-            return json.loads(candidate.read_text())
+        return json.loads(fallback_path.read_text())
 
-    raise FileNotFoundError(f"No fallback JSON found for {file_name}")
+    raise FileNotFoundError(f"No fallback JSON found at {fallback_path}")
 
 
 def _current_graph_payload() -> dict:

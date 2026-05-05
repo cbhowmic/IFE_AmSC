@@ -13,6 +13,10 @@ import numpy as np
 import openpmd_api as io
 
 
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+
+
 # In[2]:
 
 
@@ -199,7 +203,7 @@ def build_simulation_index(root_path: Path, scenarios: list[str]) -> list[dict]:
 
 
 def main():
-    root_path = Path("/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/surrogate_bp_output")
+    root_path = DATA_DIR / "surrogate_bp_output"
     scenarios = ["2026-04-29", "2026-04-30", "2026-05-01"]
 
     records = build_simulation_index(root_path, scenarios)
@@ -210,7 +214,8 @@ def main():
         "records": records,
     }
 
-    out_path = Path("simulation_index.json")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = DATA_DIR / "simulation_index.json"
     with out_path.open("w") as f:
         json.dump(payload, f, indent=2)
 
@@ -222,7 +227,6 @@ if __name__ == "__main__":
 
 
 # In[ ]:
-
 
 
 

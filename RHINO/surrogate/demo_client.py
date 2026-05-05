@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import sys
 
 from fastmcp import Client
 
@@ -95,4 +96,22 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    asyncio.run(run_demo(parse_args()))
+    try:
+        asyncio.run(run_demo(parse_args()))
+    except RuntimeError as exc:
+        if "Client failed to connect" not in str(exc):
+            raise
+
+        print(
+            "Could not connect to the RHINO MCP server.\n\n"
+            f"The client tried: {DEFAULT_MCP_URL}\n\n"
+            "Start the server in another terminal first:\n"
+            "  cd RHINO/surrogate\n"
+            "  conda activate scspdemo\n"
+            "  python mcp_server_rhino.py\n\n"
+            "If the server is using a different port, pass it explicitly, for example:\n"
+            "  python demo_client.py --Ndotminus 500 --beta 0.1 "
+            "--mcp-url http://127.0.0.1:8001/mcp",
+            file=sys.stderr,
+        )
+        sys.exit(1)

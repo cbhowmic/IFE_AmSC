@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 
-DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[1] / "data" / "surrogate_bp_output"
+DEFAULT_DATA_ROOT = Path(__file__).resolve().parent / "data" / "surrogate_bp_output"
 
 
 class SimulationLookup:
