@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 from __future__ import annotations
@@ -13,20 +13,10 @@ import numpy as np
 import openpmd_api as io
 
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-
-
-# In[2]:
+# In[ ]:
 
 
 INPUT_SPECS = [
-    {
-        "key": "I0_SD",
-        "display_name": "Startup inventory [g]",
-        "source": "series_input_attribute",
-        "attribute_key": "input:I0_SD:Starting inventory"
-    },
     {
         "key": "Ndotminus",
         "display_name": "Tritium burning rate [g/d]",
@@ -65,7 +55,7 @@ OUTPUT_SPECS = [
 ]
 
 
-# In[3]:
+# In[ ]:
 
 
 def _get_first_snapshot(series):
@@ -125,7 +115,7 @@ def get_steady_state(series, species="Tritium", subsystem=None):
 
 
 
-# In[4]:
+# In[ ]:
 
 
 def extract_inputs_from_series(series, input_specs):
@@ -203,7 +193,7 @@ def build_simulation_index(root_path: Path, scenarios: list[str]) -> list[dict]:
 
 
 def main():
-    root_path = DATA_DIR / "surrogate_bp_output"
+    root_path = Path("/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/surrogate_bp_output")
     scenarios = ["2026-04-29", "2026-04-30", "2026-05-01"]
 
     records = build_simulation_index(root_path, scenarios)
@@ -214,8 +204,7 @@ def main():
         "records": records,
     }
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = DATA_DIR / "simulation_index.json"
+    out_path = Path("simulation_index.json")
     with out_path.open("w") as f:
         json.dump(payload, f, indent=2)
 
@@ -227,6 +216,7 @@ if __name__ == "__main__":
 
 
 # In[ ]:
+
 
 
 
