@@ -86,13 +86,11 @@ class RhinoSurrogate:
 
     def predict_from_named_args(
         self,
-        I0_SD: float,
         Ndotminus: float,
         beta: float,
     ) -> dict[str, float]:
         return self.predict_from_dict(
             {
-                "I0_SD": I0_SD,
                 "Ndotminus": Ndotminus,
                 "beta": beta,
             }
