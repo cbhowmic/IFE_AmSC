@@ -13,6 +13,7 @@ RHINO/**
 # Python junk
 __pycache__/
 *.pyc
+.ipynb_checkpoints/
 
 # Editor / OS
 .vscode/
