@@ -27,7 +27,8 @@ echo "Index          : $CAMPAIGN_INDEX"
 echo "--------------------------------------------------"
 
 shopt -s nullglob
-archive_files=("${CAMPAIGN_NAMESPACE}/${ARCHIVE_PREFIX}"*.aca)
+# archive_files=("${CAMPAIGN_NAMESPACE}/${ARCHIVE_PREFIX}"*.aca)
+archive_files=("${ARCHIVE_PREFIX}"*.aca)
 shopt -u nullglob
 
 if (( ${#archive_files[@]} == 0 )); then

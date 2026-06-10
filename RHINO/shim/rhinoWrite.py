@@ -190,7 +190,7 @@ def rhino_to_adios(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     # I0 (g)	Imin (g)	I_startup (g)	I_subtract (g)	reserve_time (days)	Iops (g)	plant_doubling_time (days)
     for k,v in PostProcData.items():
         series.set_attribute(f"output:{k}", v)
-    series.set_attribute("output:Steady state time (days)", SS_time)
+    series.set_attribute("output:Steady state time (days)", ss_time)
     series.set_attribute("output:Steady state time (days)", ss_time)
     
     ##########################

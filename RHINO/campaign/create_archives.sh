@@ -135,11 +135,11 @@ for f in "${files[@]}"; do
 
     fi
 
-    ((count++))
+    count=$((count + 1))
 
     # Start next archive group
     if (( count == DATASETS_PER_ARCHIVE )); then
-        ((archive_idx++))
+        archive_idx=$((archive_idx + 1))
         count=0
     fi
 
