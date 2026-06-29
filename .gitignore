@@ -19,3 +19,14 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+.ipynb_checkpoints/
+
+# Generated/local files
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local/untracked working folders
+Laser/
+remote/
