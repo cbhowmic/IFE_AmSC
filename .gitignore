@@ -1,30 +1,28 @@
-# Ignore everything in RHINO by default
-RHINO/**
-
-# Allow RHINO directory itself
-!RHINO/
-
-# Allow scripts directory
-!RHINO/scripts/
-
-# Allow ONLY python scripts in scripts
-!RHINO/scripts/*.py
-
-# Python junk
+# Python generated files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Jupyter generated files
 .ipynb_checkpoints/
+
+# Python packaging/build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Editor / OS
 .vscode/
 .idea/
-.DS_Store
-.ipynb_checkpoints/
-
-# Generated/local files
-.ipynb_checkpoints/
-__pycache__/
-*.pyc
 .DS_Store
 
 # Local/untracked working folders

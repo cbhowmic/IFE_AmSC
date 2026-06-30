@@ -1,41 +1,42 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
- 
+  
 [project]
 name = "rhino-amsc"
-version = "0.0.0-alpha"
+version = "0.0.1a0"
 description = "Convert RHINO raw simulation data into ADIOS2 using the openPMD standard."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
-    { name = "Chandreyee Bhowmick", email = "ccb@ornl.gov", 
-      name = "Arianna Formenti", email = "ariannaformenti@lbl.gov", 
-      name = "Axel Huebl", email = "axelhuebl@lbl.gov"}
+    { name = "Chandreyee Bhowmick", email = "ccb@ornl.gov" },
+    { name = "Arianna Formenti", email = "ariannaformenti@lbl.gov" },
+    { name = "Axel Huebl", email = "axelhuebl@lbl.gov" }
 ]
 dependencies = [
     "numpy",
-    "pandas",
-    "torch",
-    "matplotlib"
+    "pandas"
 ]
 
 [project.optional-dependencies]
+io = [
+    "adios2",
+    "openpmd-api"
+]
 dev = [
     "pytest",
     "build",
     "twine"
 ]
 
-campaign = [
-    "adios2",
-    "openpmd-api"
-]
- 
 [project.scripts]
-rhino-write-rhino = "rhino.shim.rhinoWrite:rhino_to_adios"
-rhino-write-rhino-multi = "rhino.shim.rhinoWrite_multiple:..."
+rhino-write = "rhino.shim.rhinoWrite:main"
+rhino-write-multiple = "rhino.shim.rhinoWrite_multiple:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
