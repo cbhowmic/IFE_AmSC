@@ -29,3 +29,10 @@ DATA_PATH="/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/Surrogate Data/2026-
 OUTPUT_PATH=$HOME/my.bp5
 rhino-write --data-path "$DATA_PATH" --prefix $PREFIX --infix $INFIX --output-path $OUTPUT_PATH
 ```
+
+```
+OUTPUT_ROOT=$HOME
+ROOT_PATH="/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/Surrogate Data/"
+SCENARIOS=2026-04-29
+rhino-write-multiple --root-path "$ROOT_PATH" --scenarios $SCENARIOS --output-root $OUTPUT_ROOT 
+```
