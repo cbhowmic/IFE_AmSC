@@ -263,3 +263,45 @@ def rhino_to_adios(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     series.close()
     print("RHINO data written to ADIOS-OpenPMD in particle representation.")
     print("Output:", OUTPUT_PATH)
+
+
+def main() -> None:
+    """Command-line entry point for converting one RHINO run to openPMD/ADIOS2."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Convert one RHINO run into openPMD/ADIOS2 BP5 format."
+    )
+    parser.add_argument(
+        "--data-path",
+        required=True,
+        help="Directory containing the RHINO pickle files for one scenario.",
+    )
+    parser.add_argument(
+        "--prefix",
+        required=True,
+        help="Run prefix, for example '22-21-28'.",
+    )
+    parser.add_argument(
+        "--infix",
+        required=True,
+        help="Run/file infix, for example 'IFE_AmSC_500MW_FuelCycle'.",
+    )
+    parser.add_argument(
+        "--output-path",
+        required=True,
+        help="Output BP5 path.",
+    )
+
+    args = parser.parse_args()
+
+    rhino_to_adios(
+        DATA_PATH=args.data_path,
+        PREFIX=args.prefix,
+        INFIX=args.infix,
+        OUTPUT_PATH=args.output_path,
+    )
+
+
+if __name__ == "__main__":
+    main()
