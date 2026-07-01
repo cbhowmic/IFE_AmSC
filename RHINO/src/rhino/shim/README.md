@@ -20,3 +20,12 @@ These outputs are consumed by:
 - campaign indexing
 - feature extraction
 - surrogate training
+
+## Usage
+```
+PREFIX=14-24-04
+INFIX=IFE_AmSC_500MW_FuelCycle
+DATA_PATH="/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino/Surrogate Data/2026-04-29/"
+OUTPUT_PATH=$HOME/my.bp5
+rhino-write --data-path "$DATA_PATH" --prefix $PREFIX --infix $INFIX --output-path $OUTPUT_PATH
+```
