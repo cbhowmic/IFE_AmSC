@@ -24,6 +24,11 @@ io = [
     "adios2",
     "openpmd-api"
 ]
+ml = [
+    "torch",
+    "matplotlib",
+    "mlflow"
+]
 dev = [
     "pytest",
     "build",

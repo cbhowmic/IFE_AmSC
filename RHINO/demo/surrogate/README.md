@@ -9,24 +9,23 @@ Installation:
 git clone https://github.com/cbhowmic/IFE_AmSC.git
 cd IFE_AmSC
 git checkout surrogate
-conda create -y --name scspdemo -c conda-forge python nodejs
-conda activate scspdemo
-pip install -r RHINO/surrogate/requirements.txt
-npm --prefix RHINO/surrogate/react_flow_viz ci
-unzip RHINO/surrogate/data/surrogate_bp_output.zip -d RHINO/surrogate/data/
+conda env create -f environment.yml
+conda activate IFE_AmSC
+npm --prefix RHINO/demo/surrogate/react_flow_viz ci
+unzip RHINO/demo/surrogate/data/surrogate_bp_output.zip -d RHINO/demo/surrogate/data/
 ```
 
 From the same terminal:
 
 ```bash
-RHINO_MCP_PORT=8001 python RHINO/surrogate/mcp_server_rhino.py
+RHINO_MCP_PORT=8001 python RHINO/demo/surrogate/mcp_server_rhino.py
 ```
 
 Open a second terminal:
 
 ```bash
-conda activate scspdemo
-python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --mcp-url http://127.0.0.1:8001/mcp
+conda activate IFE_AmSC
+python RHINO/demo/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --mcp-url http://127.0.0.1:8001/mcp
 ```
 
 Click on the link to open the visualization in the browser. 
@@ -43,7 +42,7 @@ This folder contains the workflow for the live demo:
 
 ## Directory Structure
 
-From `RHINO/surrogate`:
+From `RHINO/demo/surrogate`:
 
 ```text
 $ tree -L 3 -I 'node_modules|__pycache__|dist'
@@ -82,7 +81,6 @@ $ tree -L 3 -I 'node_modules|__pycache__|dist'
 │   │   └── README.md
 │   └── vite.config.js
 ├── README.md
-├── requirements.txt
 ├── rhinoSurrogate.ipynb
 ├── rhinoSurrogate.py
 ├── rhino_surrogate_runtime.py
@@ -93,25 +91,19 @@ $ tree -L 3 -I 'node_modules|__pycache__|dist'
 
 ## Demo Setup
 
-From the repository root, create one Conda environment with Python plus Node.js.
-The `nodejs` Conda package also provides `npm`:
+From the repository root, create the shared Conda environment. It includes the
+Python dependencies for the AI-ready workflow, campaign tools, surrogate
+training and demo, as well as Node.js for the visualization:
 
 ```bash
-conda create -y --name scspdemo -c conda-forge python nodejs
-conda activate scspdemo
+conda env create -f environment.yml
+conda activate IFE_AmSC
 ```
 
-If the environment already exists, add Node.js to it with:
+To update an existing environment after `environment.yml` changes:
 
 ```bash
-conda activate scspdemo
-conda install -y -c conda-forge nodejs
-```
-
-Install the Python dependencies:
-
-```bash
-pip install -r RHINO/surrogate/requirements.txt
+conda env update -f environment.yml
 ```
 
 Check that Node.js and `npm` are available:
@@ -124,7 +116,7 @@ npm --version
 Install the React Flow visualization dependencies:
 
 ```bash
-npm --prefix RHINO/surrogate/react_flow_viz ci
+npm --prefix RHINO/demo/surrogate/react_flow_viz ci
 ```
 
 Use `npm ci` on the demo computer because it installs exactly the versions in
@@ -133,18 +125,18 @@ Use `npm ci` on the demo computer because it installs exactly the versions in
 Keep the downloaded BP5 simulation data in:
 
 ```text
-RHINO/surrogate/data/surrogate_bp_output/
+RHINO/demo/surrogate/data/surrogate_bp_output/
 ```
 
 If you have the zipped BP5 data folder, unzip it from the repository root:
 
 ```bash
-unzip RHINO/surrogate/data/surrogate_bp_output.zip -d RHINO/surrogate/data/
+unzip RHINO/demo/surrogate/data/surrogate_bp_output.zip -d RHINO/demo/surrogate/data/
 ```
 
 The current `simulation_index.json` contains absolute paths from NERSC.
 That is okay: `SimulationLookup` resolves those indexed paths into the
-local `RHINO/surrogate/data/surrogate_bp_output` folder at runtime. If the demo
+local `RHINO/demo/surrogate/data/surrogate_bp_output` folder at runtime. If the demo
 computer uses a different data location, set:
 
 ```bash
@@ -153,10 +145,10 @@ export RHINO_SIM_DATA_ROOT=/path/to/surrogate_bp_output
 
 ## Smoke Tests
 
-From `RHINO/surrogate`:
+From `RHINO/demo/surrogate`:
 
 ```bash
-conda activate scspdemo
+conda activate IFE_AmSC
 python test_local.py
 python test_client.py
 ```
@@ -180,7 +172,7 @@ internally.
 Example:
 
 ```bash
-python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1
+python RHINO/demo/surrogate/demo_client.py --Ndotminus 500 --beta 0.1
 ```
 
 This command requires the MCP server to be running first; see the two-terminal
@@ -198,28 +190,28 @@ Use two terminals from the repository root.
 Terminal 1 starts the MCP server:
 
 ```bash
-conda activate scspdemo
-python RHINO/surrogate/mcp_server_rhino.py
+conda activate IFE_AmSC
+python RHINO/demo/surrogate/mcp_server_rhino.py
 ```
 
 The MCP server defaults to `http://127.0.0.1:8000/mcp`. If port 8000 is already
 busy, use another port:
 
 ```bash
-RHINO_MCP_PORT=8001 python RHINO/surrogate/mcp_server_rhino.py
+RHINO_MCP_PORT=8001 python RHINO/demo/surrogate/mcp_server_rhino.py
 ```
 
 Terminal 2 sends demo inputs to the MCP server:
 
 ```bash
-conda activate scspdemo
-python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1
+conda activate IFE_AmSC
+python RHINO/demo/surrogate/demo_client.py --Ndotminus 500 --beta 0.1
 ```
 
 If the server is running on port 8001, point the client to that port:
 
 ```bash
-python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --mcp-url http://127.0.0.1:8001/mcp
+python RHINO/demo/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --mcp-url http://127.0.0.1:8001/mcp
 ```
 
 Calling `build_graph_for_nearest_simulation` keeps the latest graph payload in
@@ -250,5 +242,5 @@ graph automatically when that revision changes.
 To also refresh the bundled fallback JSON files in `react_flow_viz/public`, pass:
 
 ```bash
-python RHINO/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files
+python RHINO/demo/surrogate/demo_client.py --Ndotminus 500 --beta 0.1 --write-json-files
 ```

@@ -9,5 +9,6 @@ JOIN archives a
 JOIN attributes at
     ON at.archiveid = d.archiveid
    AND at.datasetid = d.datasetid
-WHERE at.name = '/output:I_startup (g)'
+WHERE a.name LIKE :archive_name
+  AND at.name = '/output:I_startup (g)'
 ORDER BY a.name, d.datasetid;

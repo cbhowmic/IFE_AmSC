@@ -16,9 +16,28 @@ Outputs:
 
 import sys
 import pickle 
+from datetime import datetime
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import openpmd_api as io
+
+
+def simulation_datetime_from_source(data_path, prefix):
+    """Return the run datetime encoded by its scenario directory and prefix."""
+    scenario_date = Path(data_path).name
+    try:
+        return datetime.strptime(
+            f"{scenario_date} {prefix}",
+            "%Y-%m-%d %H-%M-%S",
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "Cannot derive the simulation datetime: expected DATA_PATH to end "
+            "in YYYY-MM-DD and PREFIX to use HH-MM-SS, but received "
+            f"DATA_PATH={data_path!r} and PREFIX={prefix!r}"
+        ) from exc
 
 
 def rhino_to_adios(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
@@ -30,6 +49,7 @@ def rhino_to_adios(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     #DATA_PATH  = f"{RHINO_PATH}/Power&BurnFractionScan_Daily_Reduced1" 
     INPUT_PATH = f"{DATA_PATH}/{PREFIX}_IFE_input.pkl" 
     POSTPROC_PATH = f"{DATA_PATH}/{PREFIX}_IFE_processed.pkl" 
+    simulation_datetime = simulation_datetime_from_source(DATA_PATH, PREFIX)
     
     # Import input file 
     #sys.path.append(RHINO_PATH)
@@ -174,7 +194,7 @@ def rhino_to_adios(DATA_PATH, PREFIX, INFIX, OUTPUT_PATH):
     series.set_attribute("author", "Holly Flynn")
     series.set_attribute("authorAffiliation", "Savannah River National Laboratory")
     series.set_attribute("authorEmail", "Holly.Flynn@srnl.doe.gov")
-    series.set_attribute("date", "2025-12-16")
+    series.set_attribute("date", simulation_datetime.isoformat(timespec="seconds"))
     series.set_attribute("machine", "")
     series.set_attribute("comment", f"Provenance: data path is {DATA_PATH}, input file is {INPUT_PATH}")
     # General inputs (common to D and T) 

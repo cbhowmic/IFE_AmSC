@@ -1,5 +1,0 @@
-fastmcp
-starlette
-numpy>=2.4.1
-openpmd_api==0.17.0
-torch

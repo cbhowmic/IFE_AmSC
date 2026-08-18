@@ -16,9 +16,8 @@
 #   - multiple RHINO campaign configurations can be supported easily
 #
 # Used by:
-#   create_campaign_archives.sh
-#   create_campaign_index.sh
-#   validate_campaign.sh
+#   create_archives.sh
+#   create_index.sh
 #
 # RHINO / IFE_AmSC
 # -----------------------------------------------------------------------------
@@ -33,7 +32,15 @@ ARCHIVE_PREFIX="rhino"
 
 DATASETS_PER_ARCHIVE=80
 
-CAMPAIGN_INDEX="IFE/rhino.acx"
+CAMPAIGN_INDEX="rhino.acx"
+
+# Uncompressed TAR files are written here so hpc_campaign can index their
+# member offsets for direct access. TAR_STORAGE_HOST is the short, unique host
+# name recorded in the campaign archive for this filesystem location.
+TAR_OUTPUT_DIR="$RHINO_DATA_ROOT"
+TAR_PREFIX="rhino"
+TAR_STORAGE_SYSTEM="fs"
+TAR_STORAGE_HOST="NERSC"
 
 INPUT_DIRS=(
   "surrogate_bp_output/2026-04-29"

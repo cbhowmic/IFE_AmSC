@@ -1,0 +1,17 @@
+{
+  "RHINO_DATA_ROOT": "/global/cfs/cdirs/m3239/2026_FES-AmSC/data/rhino",
+  "CAMPAIGN_STORE": "/global/homes/b/bhowmic/campaign-store/IFE",
+  "CAMPAIGN_NAMESPACE": "IFE",
+  "ARCHIVE_PREFIX": "rhino",
+  "DATASETS_PER_ARCHIVE": 80,
+  "CAMPAIGN_INDEX": "rhino.acx",
+  "TAR_OUTPUT_DIR": ".",
+  "TAR_PREFIX": "rhino",
+  "TAR_STORAGE_SYSTEM": "fs",
+  "TAR_STORAGE_HOST": "NERSC",
+  "INPUT_DIRS": [
+    "surrogate_bp_output/2026-04-29",
+    "surrogate_bp_output/2026-04-30",
+    "surrogate_bp_output/2026-05-01"
+  ]
+}

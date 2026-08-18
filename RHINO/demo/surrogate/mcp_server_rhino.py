@@ -9,9 +9,9 @@ from urllib.parse import quote
 
 from fastmcp import FastMCP
 from starlette.responses import JSONResponse
-from rhino_surrogate_runtime import RhinoSurrogate
-from simulation_lookup import SimulationLookup 
-from graph_builder import (
+from RHINO.demo.surrogate.rhino_surrogate_runtime import RhinoSurrogate
+from RHINO.demo.surrogate.simulation_lookup import SimulationLookup 
+from RHINO.demo.surrogate.graph_builder import (
     build_graph_from_simulation,
     build_react_prediction_payload,
     write_graph_payload,

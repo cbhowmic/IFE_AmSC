@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "metadata": [
+    {
+      "key": "simulation_date",
+      "display_name": "Simulation date",
+      "role": "metadata",
+      "source": "campaign_sql",
+      "query": "list_simulation_datetime.sql",
+      "column": "simulation_date"
+    },
+    {
+      "key": "simulation_time",
+      "display_name": "Simulation time",
+      "role": "metadata",
+      "source": "campaign_sql",
+      "query": "list_simulation_datetime.sql",
+      "column": "simulation_time"
+    },
+    {
+      "key": "simulation_datetime",
+      "display_name": "Simulation date and time",
+      "role": "metadata",
+      "source": "campaign_sql",
+      "query": "list_simulation_datetime.sql",
+      "column": "simulation_datetime"
+    }
+  ],
+  "inputs": [
+    {
+      "key": "tritium_burning_rate",
+      "display_name": "Tritium burning rate [g/day]",
+      "role": "input",
+      "source": "campaign_sql",
+      "query": "list_tritium_burning_rate.sql",
+      "column": "tritium_burning_rate_g_per_day"
+    },
+    {
+      "key": "burn_fraction",
+      "display_name": "Burn fraction [-]",
+      "role": "input",
+      "source": "campaign_sql",
+      "query": "list_burn_fraction.sql",
+      "column": "burn_fraction"
+    }
+  ],
+  "outputs": [
+    {
+      "key": "plant_doubling_time_days",
+      "display_name": "Plant doubling time [days]",
+      "role": "output",
+      "source": "campaign_sql",
+      "query": "list_plant_doubling_time.sql",
+      "column": "plant_doubling_time_days"
+    },
+    {
+      "key": "minimum_startup_inventory_g",
+      "display_name": "Minimum startup inventory [g]",
+      "role": "output",
+      "source": "campaign_sql",
+      "query": "list_minimum_startup_inventory.sql",
+      "column": "minimum_startup_inventory_g"
+    },
+    {
+      "key": "tritium_in_isotope_separation",
+      "display_name": "Tritium in isotope separation [g]",
+      "role": "output",
+      "source": "campaign_adios",
+      "variable": "/data/inventory/Tritium/mass_steady",
+      "subsystem": "Isotope_Seperation",
+      "index": 10
+    }
+  ]
+}

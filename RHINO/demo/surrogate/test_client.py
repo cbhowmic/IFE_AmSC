@@ -1,7 +1,7 @@
 import asyncio
 from fastmcp import Client
 
-from mcp_server_rhino import mcp
+from RHINO.demo.surrogate.mcp_server_rhino import mcp
 
 client = Client(mcp)
 

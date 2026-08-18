@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from rhino_surrogate_runtime import RhinoSurrogate
+from RHINO.demo.surrogate.rhino_surrogate_runtime import RhinoSurrogate
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -28,7 +28,7 @@ print(result)
 print("#################")
 print("Testing simulation lookup")
 
-from simulation_lookup import SimulationLookup
+from RHINO.demo.surrogate.simulation_lookup import SimulationLookup
 
 lookup = SimulationLookup(
     index_path=DATA_DIR / "simulation_index.json",
@@ -71,7 +71,7 @@ print("#################")
 print("Testing graph builder")
 
 
-from graph_builder import build_graph_from_simulation
+from RHINO.demo.surrogate.graph_builder import build_graph_from_simulation
 
 sim_path = DATA_DIR / "surrogate_bp_output" / "2026-04-30" / "10-39-07.bp5"
 graph = build_graph_from_simulation(sim_path)
