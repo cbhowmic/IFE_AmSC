@@ -2,20 +2,48 @@ name: IFE_AmSC
 channels:
   - conda-forge
 dependencies:
+  # Runtime and scientific Python stack
   - python=3.11
-  - numpy
+  - numpy>=2.4.1
   - scipy
   - matplotlib
   - pandas
-  - jupyter
-  - ipykernel
-  - ipywidgets
-  - hdf5
   - seaborn
   - scikit-learn
   - lmfit
+  - h5py
+  - pyyaml
+  - tqdm
+
+  # Notebooks and interactive development
+  - jupyter
+  - ipykernel
+  - ipywidgets
+  - ipympl
+
+  # Data formats and local campaign-index queries
+  - hdf5
   - openpmd-api=0.17.0
+  - sqlite
+
+  # Surrogate demo frontend
+  - nodejs
+
+  # Surrogate training (imported as `torch`)
+  - pytorch
+
+  # Package development and testing
+  - pytest
+  - python-build
+  - twine
   - pip
+
+  # Packages installed from PyPI because they are unavailable or more
+  # consistently supported there for the RHINO workflows on NERSC.
   - pip:
-    - ipympl
-    - tqdm
+      - adios2==2.11.0.1014
+      - hpc-campaign==0.7.0
+      - fastmcp
+      - starlette
+      - mlflow
+      - -e ./RHINO
