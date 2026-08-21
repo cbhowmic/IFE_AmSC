@@ -82,6 +82,11 @@ rhino-write-multiple \
     --skip-run 2026-04-29:14-24-04
 ```
 
+If a discovered run is incomplete or cannot be converted, the batch command
+reports that run's filename, scenario, and error, then continues with the next
+run. Review the command output for `ERROR processing run` before treating a
+batch conversion as complete.
+
 ### `examples/rhinoWrite_multiple.ipynb`
 
 An interactive example of the multi-run conversion workflow. Use it to inspect

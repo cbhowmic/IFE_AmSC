@@ -50,22 +50,22 @@ def convert_scenarios(
                         print(f"Skipping run {prefix} in scenario {scenario}")
                         continue
 
+                    safe_param = scenario.replace(" ", "_").replace("&", "And")
+                    output_path = output_root / safe_param / f"{run_time_prefix}.bp5"
+
+                    rhino_to_adios(
+                        DATA_PATH=scenario_path,
+                        PREFIX=prefix,
+                        INFIX=infix,
+                        OUTPUT_PATH=output_path,
+                    )
+
                 except Exception as exc:
                     print(
                         f"ERROR processing run '{tfile.name}' "
                         f"in scenario '{scenario}': {exc}"
                     )
                     continue
-
-                safe_param = scenario.replace(" ", "_").replace("&", "And")
-                output_path = output_root / safe_param / f"{run_time_prefix}.bp5"
-
-                rhino_to_adios(
-                    DATA_PATH=scenario_path,
-                    PREFIX=prefix,
-                    INFIX=infix,
-                    OUTPUT_PATH=output_path,
-                )
 
         except Exception as exc:
             print(f"ERROR processing scenario '{scenario}': {exc}")

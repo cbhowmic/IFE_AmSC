@@ -8,6 +8,7 @@ dependencies:
   - scipy
   - matplotlib
   - pandas
+  - openpyxl
   - seaborn
   - scikit-learn
   - lmfit
